@@ -20,7 +20,7 @@ import { formatFileSize } from '@/shared/utils/formatFileSize'
 
 const uploadPromises = [
   'Sin registro ni pasos complicados para los invitados.',
-  'Las fotos quedan privadas para los novios.',
+  'Las fotos quedan privadas para la pareja.',
   'Cada lote conserva trazabilidad por mesa, nombre y dispositivo.',
 ]
 
@@ -230,7 +230,7 @@ export function GuestUploadPage() {
         <h1 className="page-title">Comparte la boda desde tu mirada.</h1>
         <p className="page-lead">
           Escribe tu nombre, elige tus fotos favoritas y nosotros nos encargamos
-          de guardarlas en privado para los novios.
+          de guardarlas en privado para la pareja.
         </p>
 
         <ul className="feature-list">
@@ -292,93 +292,105 @@ export function GuestUploadPage() {
           </div>
         </article>
 
-        <article className="panel">
-          <div className="field-group">
-            <label className="field-label" htmlFor="guest-name">
-              Tu nombre
-            </label>
-            <input
-              className="text-input"
-              id="guest-name"
-              maxLength={120}
-              onChange={(event) => setGuestName(event.target.value)}
-              placeholder="Ejemplo: Sebastian, primo de la novia"
-              type="text"
-              value={guestName}
-            />
-          </div>
+        {uploadContext ? (
+          <>
+            <article className="panel">
+              <div className="field-group">
+                <label className="field-label" htmlFor="guest-name">
+                  Tu nombre
+                </label>
+                <input
+                  className="text-input"
+                  id="guest-name"
+                  maxLength={120}
+                  onChange={(event) => setGuestName(event.target.value)}
+                  placeholder="Ejemplo: Sebastian, primo de la novia"
+                  type="text"
+                  value={guestName}
+                />
+              </div>
 
-          <UploadDropzone
-            onFilesSelected={handleFilesSelected}
-            remainingSlots={MAX_FILES_PER_BATCH - selectedFiles.length}
-          />
+              <UploadDropzone
+                onFilesSelected={handleFilesSelected}
+                remainingSlots={MAX_FILES_PER_BATCH - selectedFiles.length}
+              />
 
-          <PhotoSelectionSummary
-            files={selectedFiles}
-            onRemoveFile={handleRemoveFile}
-          />
+              <PhotoSelectionSummary
+                files={selectedFiles}
+                onRemoveFile={handleRemoveFile}
+              />
 
-          {statusMessage ? (
-            <p
-              className={
-                statusMessage.tone === 'error'
-                  ? 'notice-banner notice-banner--error'
-                  : 'notice-banner notice-banner--success'
-              }
-            >
-              {statusMessage.text}
+              {statusMessage ? (
+                <p
+                  className={
+                    statusMessage.tone === 'error'
+                      ? 'notice-banner notice-banner--error'
+                      : 'notice-banner notice-banner--success'
+                  }
+                >
+                  {statusMessage.text}
+                </p>
+              ) : null}
+
+              <div className="action-row">
+                <button
+                  className="button"
+                  disabled={isUploadDisabled}
+                  onClick={handleSubmitUpload}
+                  type="button"
+                >
+                  {isSubmitting
+                    ? `Subiendo ${uploadProgress.completed}/${uploadProgress.total || selectedFiles.length} fotos...`
+                    : 'Subir fotos'}
+                </button>
+                <p className="helper-copy">
+                  {isSubmitting
+                    ? `Procesando: ${uploadProgress.currentFileName || 'preparando lote'}`
+                  : validationMessage ||
+                      'Puedes subir hasta 10 fotos por lote. Las fotos se guardan en privado.'}
+                </p>
+              </div>
+
+              {lastUploadResult ? (
+                <p className="helper-copy">
+                  Lote registrado: {lastUploadResult.batchId}
+                </p>
+              ) : null}
+            </article>
+
+            <article className="panel">
+              <h2 className="panel-title">Trazabilidad del dispositivo</h2>
+              <div className="metric-grid">
+                <div className="metric-card">
+                  <span className="metric-label">Idioma</span>
+                  <strong className="metric-value">{deviceContext.language}</strong>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">Zona horaria</span>
+                  <strong className="metric-value">{deviceContext.timezone}</strong>
+                </div>
+                <div className="metric-card">
+                  <span className="metric-label">Pantalla</span>
+                  <strong className="metric-value">
+                    {deviceContext.screenWidth} x {deviceContext.screenHeight}
+                  </strong>
+                </div>
+              </div>
+              <p className="helper-copy">
+                Estos datos se guardan junto con el lote para mantener la
+                trazabilidad de cada subida.
+              </p>
+            </article>
+          </>
+        ) : (
+          <article className="panel">
+            <h2 className="panel-title">Esta pantalla funciona solo con el QR de la mesa.</h2>
+            <p className="panel-subtitle">
+              Si eres invitado, escanea el codigo impreso en tu mesa para abrir el
+              formulario correcto de subida.
             </p>
-          ) : null}
-
-          <div className="action-row">
-            <button
-              className="button"
-              disabled={isUploadDisabled}
-              onClick={handleSubmitUpload}
-              type="button"
-            >
-              {isSubmitting
-                ? `Subiendo ${uploadProgress.completed}/${uploadProgress.total || selectedFiles.length} fotos...`
-                : 'Subir fotos'}
-            </button>
-            <p className="helper-copy">
-              {isSubmitting
-                ? `Procesando: ${uploadProgress.currentFileName || 'preparando lote'}`
-                : validationMessage ||
-                  'Puedes subir hasta 10 fotos por lote. Las fotos se guardan en privado.'}
-            </p>
-          </div>
-
-          {lastUploadResult ? (
-            <p className="helper-copy">
-              Lote registrado: {lastUploadResult.batchId}
-            </p>
-          ) : null}
-        </article>
-
-        <article className="panel">
-          <h2 className="panel-title">Trazabilidad del dispositivo</h2>
-          <div className="metric-grid">
-            <div className="metric-card">
-              <span className="metric-label">Idioma</span>
-              <strong className="metric-value">{deviceContext.language}</strong>
-            </div>
-            <div className="metric-card">
-              <span className="metric-label">Zona horaria</span>
-              <strong className="metric-value">{deviceContext.timezone}</strong>
-            </div>
-            <div className="metric-card">
-              <span className="metric-label">Pantalla</span>
-              <strong className="metric-value">
-                {deviceContext.screenWidth} x {deviceContext.screenHeight}
-              </strong>
-            </div>
-          </div>
-          <p className="helper-copy">
-            Estos datos se guardan junto con el lote para mantener la
-            trazabilidad de cada subida.
-          </p>
-        </article>
+          </article>
+        )}
       </div>
     </section>
   )

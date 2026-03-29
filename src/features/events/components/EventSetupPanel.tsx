@@ -1,10 +1,11 @@
 import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 
-import type { AdminEvent, TableQrRecord } from '@/features/admin/lib/adminTypes'
+import type { AccountEvent, TableQrRecord } from '@/features/events/lib/eventTypes'
 
 type EventSetupPanelProps = {
   activeTablesCount: number
-  event: AdminEvent
+  event: AccountEvent
   isGenerating: boolean
   onDesiredTableCountChange: (value: string) => void
   onGenerateMissingTables: () => Promise<void>
@@ -12,6 +13,7 @@ type EventSetupPanelProps = {
   statusMessage: { text: string; tone: 'error' | 'success' } | null
   tables: TableQrRecord[]
   targetTableCount: string
+  totalScans: number
 }
 
 function formatEventDate(eventDate: string | null) {
@@ -36,6 +38,7 @@ export function EventSetupPanel({
   statusMessage,
   tables,
   targetTableCount,
+  totalScans,
 }: EventSetupPanelProps) {
   async function handleSubmit(eventForm: FormEvent<HTMLFormElement>) {
     eventForm.preventDefault()
@@ -46,16 +49,21 @@ export function EventSetupPanel({
     <article className="panel panel--highlight admin-setup">
       <div className="admin-setup__header">
         <div>
-          <p className="eyebrow">Evento activo</p>
+          <p className="eyebrow">Espacio del evento</p>
           <h1 className="page-title admin-setup__title">{event.title}</h1>
           <p className="page-lead admin-setup__lead">
             {formatEventDate(event.event_date)} - slug: {event.slug}
           </p>
         </div>
 
-        <button className="button button--secondary" onClick={onSignOut} type="button">
-          Cerrar sesion
-        </button>
+        <div className="button-row">
+          <Link className="button button--secondary" to="/dashboard">
+            Volver al dashboard
+          </Link>
+          <button className="button button--secondary" onClick={onSignOut} type="button">
+            Cerrar sesion
+          </button>
+        </div>
       </div>
 
       <div className="metric-grid admin-setup__metrics">
@@ -68,8 +76,8 @@ export function EventSetupPanel({
           <strong className="metric-value">{activeTablesCount}</strong>
         </div>
         <div className="metric-card">
-          <span className="metric-label">Trazabilidad</span>
-          <strong className="metric-value">Mesa + familia</strong>
+          <span className="metric-label">Escaneos totales</span>
+          <strong className="metric-value">{totalScans}</strong>
         </div>
       </div>
 

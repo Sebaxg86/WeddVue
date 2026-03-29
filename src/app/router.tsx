@@ -1,18 +1,36 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AppShell } from '@/shared/layouts/AppShell'
 import { NotFoundPage } from '@/shared/pages/NotFoundPage'
 
-const AdminDashboardPage = lazy(() =>
-  import('@/features/admin/pages/AdminDashboardPage').then((module) => ({
-    default: module.AdminDashboardPage,
+const AuthPage = lazy(() =>
+  import('@/features/auth/pages/AuthPage').then((module) => ({
+    default: module.AuthPage,
+  })),
+)
+
+const DashboardPage = lazy(() =>
+  import('@/features/dashboard/pages/DashboardPage').then((module) => ({
+    default: module.DashboardPage,
+  })),
+)
+
+const EventWorkspacePage = lazy(() =>
+  import('@/features/events/pages/EventWorkspacePage').then((module) => ({
+    default: module.EventWorkspacePage,
   })),
 )
 
 const GuestUploadPage = lazy(() =>
   import('@/features/guest-upload/pages/GuestUploadPage').then((module) => ({
     default: module.GuestUploadPage,
+  })),
+)
+
+const HomeLandingPage = lazy(() =>
+  import('@/features/home/pages/HomeLandingPage').then((module) => ({
+    default: module.HomeLandingPage,
   })),
 )
 
@@ -31,9 +49,12 @@ export function AppRouter() {
       <Suspense fallback={<RouteLoadingFallback />}>
         <Routes>
           <Route element={<AppShell />}>
-            <Route index element={<GuestUploadPage />} />
+            <Route index element={<HomeLandingPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/dashboard/events/:eventId" element={<EventWorkspacePage />} />
+            <Route path="/admin" element={<Navigate replace to="/dashboard" />} />
             <Route path="/upload" element={<GuestUploadPage />} />
-            <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

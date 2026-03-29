@@ -1,18 +1,32 @@
 -- WedSnap migration
 -- Goal:
--- 1. Enable frictionless guest uploads with Supabase anonymous sessions
--- 2. Add secure RPC functions for QR validation and batch/photo registration
--- 3. Enable RLS policies for admins and storage uploads in bucket fotos-boda
+-- 1. Move from single-event admin flow to account-owned multi-event dashboard
+-- 2. Keep frictionless guest uploads through anonymous Supabase sessions
+-- 3. Align RLS for owners, optional super-admins, and private storage access
 
 alter type public.photo_status add value if not exists 'uploaded';
 alter type public.upload_batch_status add value if not exists 'completed';
 alter type public.upload_batch_status add value if not exists 'failed';
+
+alter table public.events
+  add column if not exists owner_user_id uuid;
 
 alter table public.upload_batches
   add column if not exists guest_auth_user_id uuid;
 
 do $$
 begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'events_owner_user_id_fkey'
+      and conrelid = 'public.events'::regclass
+  ) then
+    alter table public.events
+      add constraint events_owner_user_id_fkey
+      foreign key (owner_user_id) references auth.users (id);
+  end if;
+
   if not exists (
     select 1
     from pg_constraint
@@ -26,11 +40,65 @@ begin
 end
 $$;
 
+do $$
+declare
+  fallback_owner_id uuid;
+begin
+  select user_id
+  into fallback_owner_id
+  from public.admin_profiles
+  order by created_at asc
+  limit 1;
+
+  if fallback_owner_id is not null then
+    update public.events
+    set owner_user_id = fallback_owner_id
+    where owner_user_id is null;
+  end if;
+
+  if exists (
+    select 1
+    from public.events
+    where owner_user_id is null
+  ) then
+    raise exception 'Existen eventos sin owner_user_id. Asigna un propietario antes de continuar.';
+  end if;
+end
+$$;
+
+alter table public.events
+  alter column owner_user_id set not null;
+
+create index if not exists idx_events_owner_user_id
+  on public.events (owner_user_id);
+
 create index if not exists idx_upload_batches_guest_auth_user_id
   on public.upload_batches (guest_auth_user_id);
 
+comment on column public.events.owner_user_id is
+'auth.users id of the account that owns the event.';
+
 comment on column public.upload_batches.guest_auth_user_id is
 'auth.users id used for frictionless anonymous guest uploads.';
+
+create or replace function public.generate_qr_token(token_length integer default 18)
+returns text
+language plpgsql
+volatile
+set search_path = public
+as $$
+declare
+  chars constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  token text := '';
+  target_length integer := greatest(coalesce(token_length, 18), 12);
+begin
+  for index in 1..target_length loop
+    token := token || substr(chars, 1 + floor(random() * length(chars))::integer, 1);
+  end loop;
+
+  return token;
+end;
+$$;
 
 create or replace function public.is_admin(p_user_id uuid)
 returns boolean
@@ -48,6 +116,117 @@ $$;
 
 revoke all on function public.is_admin(uuid) from public;
 grant execute on function public.is_admin(uuid) to authenticated;
+
+create or replace function public.is_event_owner(p_event_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.events
+    where id = p_event_id
+      and (
+        owner_user_id = p_user_id
+        or public.is_admin(p_user_id)
+      )
+  );
+$$;
+
+revoke all on function public.is_event_owner(uuid, uuid) from public;
+grant execute on function public.is_event_owner(uuid, uuid) to authenticated;
+
+create or replace function public.can_manage_upload_batch(p_batch_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.upload_batches as ub
+    inner join public.events as e
+      on e.id = ub.event_id
+    where ub.id = p_batch_id
+      and (
+        ub.guest_auth_user_id = p_user_id
+        or e.owner_user_id = p_user_id
+        or public.is_admin(p_user_id)
+      )
+  );
+$$;
+
+revoke all on function public.can_manage_upload_batch(uuid, uuid) from public;
+grant execute on function public.can_manage_upload_batch(uuid, uuid) to authenticated;
+
+create or replace function public.can_manage_photo(p_photo_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.photos as p
+    inner join public.upload_batches as ub
+      on ub.id = p.batch_id
+    inner join public.events as e
+      on e.id = ub.event_id
+    where p.id = p_photo_id
+      and (
+        e.owner_user_id = p_user_id
+        or public.is_admin(p_user_id)
+      )
+  );
+$$;
+
+revoke all on function public.can_manage_photo(uuid, uuid) from public;
+grant execute on function public.can_manage_photo(uuid, uuid) to authenticated;
+
+create or replace function public.can_manage_storage_object(p_object_name text, p_user_id uuid)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  batch_id_text text;
+  batch_id uuid;
+begin
+  batch_id_text := nullif(split_part(coalesce(p_object_name, ''), '/', 2), '');
+
+  if batch_id_text is null then
+    return false;
+  end if;
+
+  begin
+    batch_id := batch_id_text::uuid;
+  exception
+    when invalid_text_representation then
+      return false;
+  end;
+
+  return exists (
+    select 1
+    from public.upload_batches as ub
+    inner join public.events as e
+      on e.id = ub.event_id
+    where ub.id = batch_id
+      and (
+        e.owner_user_id = p_user_id
+        or public.is_admin(p_user_id)
+      )
+  );
+end;
+$$;
+
+revoke all on function public.can_manage_storage_object(text, uuid) from public;
+grant execute on function public.can_manage_storage_object(text, uuid) to authenticated;
 
 create or replace function public.get_guest_upload_context(p_token text)
 returns table (
@@ -300,15 +479,7 @@ begin
     raise exception 'No existe una sesion valida para registrar fotos.';
   end if;
 
-  if not exists (
-    select 1
-    from public.upload_batches
-    where id = p_batch_id
-      and (
-        guest_auth_user_id = v_auth_user_id
-        or public.is_admin(v_auth_user_id)
-      )
-  ) then
+  if not public.can_manage_upload_batch(p_batch_id, v_auth_user_id) then
     raise exception 'No tienes permiso para registrar fotos en este lote.';
   end if;
 
@@ -389,10 +560,7 @@ begin
     status = p_status,
     completed_at = timezone('utc', now())
   where id = p_batch_id
-    and (
-      guest_auth_user_id = v_auth_user_id
-      or public.is_admin(v_auth_user_id)
-    );
+    and public.can_manage_upload_batch(p_batch_id, v_auth_user_id);
 
   if not found then
     raise exception 'No tienes permiso para cerrar este lote.';
@@ -408,9 +576,6 @@ alter table public.events enable row level security;
 alter table public.qr_codes enable row level security;
 alter table public.upload_batches enable row level security;
 alter table public.photos enable row level security;
-
--- Supabase Storage already manages RLS on storage.objects.
--- We only define the policies we need below.
 
 drop policy if exists admin_profiles_select_self_or_admin on public.admin_profiles;
 create policy admin_profiles_select_self_or_admin
@@ -431,36 +596,46 @@ create policy admin_profiles_admin_manage_all
   with check (public.is_admin(auth.uid()));
 
 drop policy if exists events_admin_all on public.events;
-create policy events_admin_all
+drop policy if exists events_account_all on public.events;
+create policy events_account_all
   on public.events
   for all
   to authenticated
-  using (public.is_admin(auth.uid()))
-  with check (public.is_admin(auth.uid()));
+  using (
+    owner_user_id = auth.uid()
+    or public.is_admin(auth.uid())
+  )
+  with check (
+    owner_user_id = auth.uid()
+    or public.is_admin(auth.uid())
+  );
 
 drop policy if exists qr_codes_admin_all on public.qr_codes;
-create policy qr_codes_admin_all
+drop policy if exists qr_codes_account_all on public.qr_codes;
+create policy qr_codes_account_all
   on public.qr_codes
   for all
   to authenticated
-  using (public.is_admin(auth.uid()))
-  with check (public.is_admin(auth.uid()));
+  using (public.is_event_owner(event_id, auth.uid()))
+  with check (public.is_event_owner(event_id, auth.uid()));
 
 drop policy if exists upload_batches_admin_all on public.upload_batches;
-create policy upload_batches_admin_all
+drop policy if exists upload_batches_account_all on public.upload_batches;
+create policy upload_batches_account_all
   on public.upload_batches
   for all
   to authenticated
-  using (public.is_admin(auth.uid()))
-  with check (public.is_admin(auth.uid()));
+  using (public.is_event_owner(event_id, auth.uid()))
+  with check (public.is_event_owner(event_id, auth.uid()));
 
 drop policy if exists photos_admin_all on public.photos;
-create policy photos_admin_all
+drop policy if exists photos_account_all on public.photos;
+create policy photos_account_all
   on public.photos
   for all
   to authenticated
-  using (public.is_admin(auth.uid()))
-  with check (public.is_admin(auth.uid()));
+  using (public.can_manage_photo(id, auth.uid()))
+  with check (public.can_manage_photo(id, auth.uid()));
 
 drop policy if exists storage_guest_upload_insert_fotos_boda on storage.objects;
 create policy storage_guest_upload_insert_fotos_boda
@@ -483,21 +658,23 @@ create policy storage_guest_upload_delete_own_fotos_boda
   );
 
 drop policy if exists storage_admin_read_fotos_boda on storage.objects;
-create policy storage_admin_read_fotos_boda
+drop policy if exists storage_owner_read_fotos_boda on storage.objects;
+create policy storage_owner_read_fotos_boda
   on storage.objects
   for select
   to authenticated
   using (
     bucket_id = 'fotos-boda'
-    and public.is_admin(auth.uid())
+    and public.can_manage_storage_object(name, auth.uid())
   );
 
 drop policy if exists storage_admin_delete_fotos_boda on storage.objects;
-create policy storage_admin_delete_fotos_boda
+drop policy if exists storage_owner_delete_fotos_boda on storage.objects;
+create policy storage_owner_delete_fotos_boda
   on storage.objects
   for delete
   to authenticated
   using (
     bucket_id = 'fotos-boda'
-    and public.is_admin(auth.uid())
+    and public.can_manage_storage_object(name, auth.uid())
   );

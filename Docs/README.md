@@ -20,10 +20,10 @@ Technical documentation for the WedSnap repository.
 ## Suggested Reading Order
 
 1. Read [Getting Started](Getting_Started.md) to initialize the React app and local environment.
-2. Review [Architecture Overview](Architecture.md) to understand the guest flow, admin flow, and security model.
+2. Review [Architecture Overview](Architecture.md) to understand the public landing, owner flow, guest flow, and security model.
 3. Read [App Pipeline](App_Pipeline.md) to understand the runtime flow from browser entry to page modules.
 4. Use [Module Map](Module_Map.md) when you need to answer "If I want to modify X, where do I touch?".
 5. Open [Database Docs](Db/README.md) for the database workflow and SQL files.
 6. Run [Migration_Script.sql](Db/Migration_Script.sql) in Supabase SQL Editor when applying database changes.
 7. Use [Database_schema.sql](Db/Database_schema.sql) as a read-only reference of the current database state.
-8. Use [Supabase_seed_template.sql](Db/Supabase_seed_template.sql) to create the event, assign the first admin, and generate table QR codes.
+8. Use [Supabase_seed_template.sql](Db/Supabase_seed_template.sql) only when you need a manual SQL seed for an owner-linked event and QR rows.

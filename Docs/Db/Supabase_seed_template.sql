@@ -1,58 +1,43 @@
 -- WedSnap seed template
 -- Replace the placeholder values before running.
+-- This template is optional now that owners can create events from the dashboard.
 
--- 1. Create or update the event
-insert into public.events (
-  slug,
-  title,
-  event_date,
-  is_active
-)
-values (
-  'your-event-slug',
-  'Your Wedding Title',
-  '2026-12-31',
-  true
-)
-on conflict (slug) do update
-set
-  title = excluded.title,
-  event_date = excluded.event_date,
-  is_active = excluded.is_active;
-
--- 2. Link your first admin after creating the account in Supabase Auth
--- Replace the email below with the real admin email that already exists in auth.users
 do $$
 declare
-  admin_user_id uuid;
+  owner_user_id uuid;
 begin
   select id
-  into admin_user_id
+  into owner_user_id
   from auth.users
   where email = 'usuario@correo.com';
 
-  if admin_user_id is null then
-    raise exception 'No auth.users record was found for the provided admin email.';
+  if owner_user_id is null then
+    raise exception 'No auth.users record was found for the provided owner email.';
   end if;
 
-  insert into public.admin_profiles (
-    user_id,
-    full_name,
-    role
+  insert into public.events (
+    owner_user_id,
+    slug,
+    title,
+    event_date,
+    is_active
   )
   values (
-    admin_user_id,
-    'Sebastian Chairez',
-    'owner'
+    owner_user_id,
+    'your-event-slug',
+    'Your Wedding Title',
+    '2026-12-31',
+    true
   )
-  on conflict (user_id) do update
+  on conflict (slug) do update
   set
-    full_name = excluded.full_name,
-    role = excluded.role;
+    owner_user_id = excluded.owner_user_id,
+    title = excluded.title,
+    event_date = excluded.event_date,
+    is_active = excluded.is_active;
 end
 $$;
 
--- 3. Generate QR codes for tables
 with target_event as (
   select id
   from public.events
@@ -80,7 +65,6 @@ set
   table_label = excluded.table_label,
   is_active = excluded.is_active;
 
--- 4. Check the generated QR rows
 select
   table_number,
   table_label,

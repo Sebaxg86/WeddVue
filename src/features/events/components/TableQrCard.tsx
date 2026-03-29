@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { TableQrRecord } from '@/features/admin/lib/adminTypes'
+import type { TableQrRecord } from '@/features/events/lib/eventTypes'
 
 type TableQrCardProps = {
   baseUploadUrl: string

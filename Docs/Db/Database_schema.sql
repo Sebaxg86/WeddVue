@@ -16,7 +16,9 @@ CREATE TABLE public.events (
   event_date date,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT events_pkey PRIMARY KEY (id)
+  owner_user_id uuid NOT NULL,
+  CONSTRAINT events_pkey PRIMARY KEY (id),
+  CONSTRAINT events_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.photos (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -78,7 +80,9 @@ CREATE TABLE public.upload_batches (
   network_type text,
   ip_hash text,
   referrer text,
+  guest_auth_user_id uuid,
   CONSTRAINT upload_batches_pkey PRIMARY KEY (id),
+  CONSTRAINT upload_batches_guest_auth_user_id_fkey FOREIGN KEY (guest_auth_user_id) REFERENCES auth.users(id),
   CONSTRAINT upload_batches_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id),
   CONSTRAINT upload_batches_qr_code_id_fkey FOREIGN KEY (qr_code_id) REFERENCES public.qr_codes(id)
 );

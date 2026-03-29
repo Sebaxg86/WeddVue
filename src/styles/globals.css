@@ -124,6 +124,10 @@ a {
   text-transform: uppercase;
 }
 
+.site-brand-link {
+  display: inline-block;
+}
+
 .site-caption {
   margin: 4px 0 0;
   color: var(--color-muted);
@@ -179,6 +183,97 @@ a {
 .panel-stack {
   display: grid;
   gap: 24px;
+}
+
+.landing,
+.landing__cards {
+  display: grid;
+  gap: 24px;
+}
+
+.landing__copy {
+  align-content: center;
+}
+
+.landing__title {
+  max-width: 10ch;
+}
+
+.landing__lead {
+  max-width: 52ch;
+}
+
+.landing__cta {
+  min-width: 280px;
+}
+
+.landing__note {
+  max-width: 44ch;
+}
+
+.auth-page__copy,
+.dashboard-events {
+  display: grid;
+  gap: 24px;
+}
+
+.auth-card {
+  display: grid;
+  gap: 22px;
+  align-content: start;
+}
+
+.auth-card__title,
+.dashboard-hero__title {
+  max-width: none;
+}
+
+.auth-card__lead,
+.dashboard-hero__lead {
+  max-width: none;
+}
+
+.auth-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 8px;
+  border-radius: calc(var(--radius-lg) - 6px);
+  background: rgba(247, 243, 239, 0.92);
+  border: 1px solid var(--color-line);
+}
+
+.auth-switch__button {
+  padding: 12px 14px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.auth-switch__button:hover {
+  transform: translateY(-1px);
+}
+
+.auth-switch__button--active {
+  background: var(--color-surface-strong);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-card);
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.landing-card {
+  min-height: 180px;
+  display: grid;
+  align-content: start;
 }
 
 .eyebrow,
@@ -479,6 +574,58 @@ a {
   gap: 20px;
 }
 
+.dashboard-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.dashboard-hero {
+  display: grid;
+  gap: 20px;
+}
+
+.dashboard-hero__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.dashboard-hero__metrics {
+  margin-top: 4px;
+}
+
+.dashboard-events__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.event-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.event-card {
+  display: grid;
+  gap: 18px;
+}
+
+.event-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.event-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .admin-auth__title,
 .admin-setup__title {
   max-width: none;
@@ -633,6 +780,9 @@ a {
   }
 
   .admin-setup__header,
+  .dashboard-hero__header,
+  .dashboard-events__header,
+  .event-card__header,
   .admin-dashboard__tables-header,
   .table-card__header {
     flex-direction: column;
@@ -643,6 +793,8 @@ a {
     width: 100%;
   }
 
+  .event-card-grid,
+  .event-card__metrics,
   .admin-dashboard__tables-grid,
   .table-card__meta,
   .table-card__actions {
@@ -676,12 +828,17 @@ a {
   .button,
   .ghost-button,
   .site-nav__link,
-  .toggle-field {
+  .toggle-field,
+  .auth-switch__button {
     width: 100%;
   }
 
   .site-nav {
     width: 100%;
+  }
+
+  .auth-switch {
+    grid-template-columns: 1fr;
   }
 
   .action-row,

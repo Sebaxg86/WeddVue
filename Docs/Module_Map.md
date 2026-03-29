@@ -19,6 +19,28 @@ Use this document to answer the practical question:
 
 - Add or change pages: [router.tsx](../src/app/router.tsx)
 - Change the top navigation or shell layout: [AppShell.tsx](../src/shared/layouts/AppShell.tsx)
+- Change the public landing page at `/`: [HomeLandingPage.tsx](../src/features/home/pages/HomeLandingPage.tsx)
+- Change the not-found experience: [NotFoundPage.tsx](../src/shared/pages/NotFoundPage.tsx)
+
+### Authentication and account access
+
+- Change the login/signup page at `/auth`: [AuthPage.tsx](../src/features/auth/pages/AuthPage.tsx)
+- Change the auth form UI and mode toggle: [AuthForm.tsx](../src/features/auth/components/AuthForm.tsx)
+- Change how browser sessions are detected, including anonymous-vs-account session logic: [useSupabaseSession.ts](../src/lib/supabase/useSupabaseSession.ts)
+
+### Account dashboard
+
+- Change the main owner dashboard at `/dashboard`: [DashboardPage.tsx](../src/features/dashboard/pages/DashboardPage.tsx)
+- Change the create-event card and owner summary: [CreateEventPanel.tsx](../src/features/dashboard/components/CreateEventPanel.tsx)
+- Change each event card in the dashboard list: [EventCard.tsx](../src/features/dashboard/components/EventCard.tsx)
+
+### Event workspace and QR setup
+
+- Change the event workspace page at `/dashboard/events/:eventId`: [EventWorkspacePage.tsx](../src/features/events/pages/EventWorkspacePage.tsx)
+- Change the event summary card and table-count generation flow: [EventSetupPanel.tsx](../src/features/events/components/EventSetupPanel.tsx)
+- Change each table card, QR actions, or mobile QR controls: [TableQrCard.tsx](../src/features/events/components/TableQrCard.tsx)
+- Change event-side types: [eventTypes.ts](../src/features/events/lib/eventTypes.ts)
+- Change how frontend QR tokens are generated before saving: [generateQrToken.ts](../src/features/events/lib/generateQrToken.ts)
 
 ### Guest upload screen
 
@@ -43,21 +65,6 @@ Use this document to answer the practical question:
 - Change how the browser Supabase client is created: [client.ts](../src/lib/supabase/client.ts)
 - Change the example environment variables: [.env.example](../.env.example)
 
-### Admin area
-
-- Change the admin page orchestration, session bootstrap, table filtering, or Supabase reads/writes: [AdminDashboardPage.tsx](../src/features/admin/pages/AdminDashboardPage.tsx)
-- Change the admin sign-in form: [AdminLoginForm.tsx](../src/features/admin/components/AdminLoginForm.tsx)
-- Change the event summary card and table-count creation flow: [EventSetupPanel.tsx](../src/features/admin/components/EventSetupPanel.tsx)
-- Change each table card, QR actions, or mobile QR controls: [TableQrCard.tsx](../src/features/admin/components/TableQrCard.tsx)
-- Change admin-side types: [adminTypes.ts](../src/features/admin/lib/adminTypes.ts)
-- Change how frontend QR tokens are generated before saving: [generateQrToken.ts](../src/features/admin/lib/generateQrToken.ts)
-
-### Table setup and QR generation
-
-- Change how tables are represented in the database: [Migration_Script.sql](Db/Migration_Script.sql)
-- Change how initial table rows are generated: [Supabase_seed_template.sql](Db/Supabase_seed_template.sql)
-- Change the admin UX for configuring tables and generating QRs: [AdminDashboardPage.tsx](../src/features/admin/pages/AdminDashboardPage.tsx)
-
 ### Global look and feel
 
 - Change colors, spacing, typography, layout primitives, buttons, cards, or responsive behavior: [globals.css](../src/styles/globals.css)
@@ -73,7 +80,7 @@ Use this document to answer the practical question:
 
 - Apply a new database change in Supabase: [Migration_Script.sql](Db/Migration_Script.sql)
 - Check the current exported database shape: [Database_schema.sql](Db/Database_schema.sql)
-- Seed the event, first admin, and QR codes: [Supabase_seed_template.sql](Db/Supabase_seed_template.sql)
+- Seed an owner-linked event and QR rows manually: [Supabase_seed_template.sql](Db/Supabase_seed_template.sql)
 - Understand the database workflow: [Docs/Db/README.md](Db/README.md)
 
 ### Tooling and project configuration
@@ -97,7 +104,10 @@ If the change is:
 
 - visual: start in `src/styles/` or the feature component
 - route-related: start in `src/app/router.tsx`
-- feature-specific: start in `src/features/<feature>/`
+- account access: start in `src/features/auth/`
+- owner dashboard: start in `src/features/dashboard/`
+- event setup or QR logic: start in `src/features/events/`
+- guest upload: start in `src/features/guest-upload/`
 - infrastructure-related: start in `src/lib/`
 - cross-cutting UI: start in `src/shared/`
 - database-related: start in `Docs/Db/`

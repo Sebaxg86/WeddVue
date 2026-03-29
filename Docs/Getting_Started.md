@@ -45,8 +45,8 @@ Do not commit real secrets to Git.
 1. Open Supabase SQL Editor.
 2. Run [Migration_Script.sql](Db/Migration_Script.sql).
 3. Enable Anonymous Sign-Ins in `Authentication -> Providers -> Anonymous`.
-4. Create your first admin user in Supabase Auth.
-5. Run [Supabase_seed_template.sql](Db/Supabase_seed_template.sql) after replacing the placeholders.
+4. Create your first owner account in Supabase Auth, or sign up from the `/auth` page once the app is running.
+5. If you want to seed an event manually with SQL, run [Supabase_seed_template.sql](Db/Supabase_seed_template.sql) after replacing the placeholders.
 6. Keep [Database_schema.sql](Db/Database_schema.sql) only as the exported reference snapshot of the current live database.
 
 ## 4. Run The App
@@ -65,8 +65,10 @@ http://localhost:5173
 
 ## 5. Quick Test Routes
 
+- Public landing: `http://localhost:5173/`
+- Auth flow: `http://localhost:5173/auth`
+- Owner dashboard: `http://localhost:5173/dashboard`
 - Guest flow: `http://localhost:5173/upload?t=<your-table-token>`
-- Admin flow: `http://localhost:5173/admin`
 
 ## 6. Suggested Initial Frontend Structure
 
@@ -78,11 +80,17 @@ src/
     App.tsx
     router.tsx
   features/
-    guest-upload/
+    auth/
+      components/
+      pages/
+    dashboard/
+      components/
+      pages/
+    events/
       components/
       lib/
       pages/
-    admin/
+    guest-upload/
       components/
       lib/
       pages/
@@ -100,6 +108,6 @@ src/
 ## MVP Build Order
 
 1. Guest upload flow from QR token to private bucket.
-2. Admin QR and table setup.
-3. Admin media review and download flow.
+2. Owner auth and multi-event dashboard.
+3. Event QR and table setup workspace.
 4. Optional hardening with Turnstile and Edge Functions.
