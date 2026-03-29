@@ -14,13 +14,13 @@ This guide explains how to initialize the project in this repository and prepare
 From the repository root, scaffold the frontend in place:
 
 ```bash
-npm create vite@latest . -- --template react
+npm create vite@latest . -- --template react-ts
 ```
 
-If you prefer TypeScript instead of JavaScript:
+If you specifically want plain JavaScript instead:
 
 ```bash
-npm create vite@latest . -- --template react-ts
+npm create vite@latest . -- --template react
 ```
 
 Because the repository already contains files, Vite may warn that the current directory is not empty. Continue and keep the existing files.
@@ -84,18 +84,29 @@ http://localhost:5173
 
 ## 6. Suggested Initial Frontend Structure
 
-Once the React app is generated, start with a structure similar to:
+The project is currently organized like this:
 
 ```text
 src/
   app/
+    App.tsx
+    router.tsx
   features/
     guest-upload/
+      components/
+      lib/
+      pages/
     admin/
+      pages/
   lib/
+    config/
+    device/
     supabase/
+  shared/
+    layouts/
+    pages/
     utils/
-  routes/
+  styles/
 ```
 
 ## MVP Build Order
