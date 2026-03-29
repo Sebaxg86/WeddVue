@@ -1,7 +1,6 @@
 import { startTransition, useDeferredValue, useEffect, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
-import { EventSetupPanel } from '@/features/events/components/EventSetupPanel'
 import { TableQrCard } from '@/features/events/components/TableQrCard'
 import type { AccountEvent, TableQrRecord } from '@/features/events/lib/eventTypes'
 import { generateQrToken } from '@/features/events/lib/generateQrToken'
@@ -11,6 +10,7 @@ import {
   isAccountSession,
   useSupabaseSession,
 } from '@/lib/supabase/useSupabaseSession'
+import { PrivateEditorialLayout } from '@/shared/layouts/PrivateEditorialLayout'
 
 type StatusMessage = {
   text: string
@@ -20,7 +20,7 @@ type StatusMessage = {
 async function fetchWorkspaceData(eventId: string) {
   if (!supabase || !eventId) {
     return {
-      errorMessage: 'No encontramos un evento valido para cargar.',
+      errorMessage: 'No encontramos un evento válido para cargar.',
       event: null as AccountEvent | null,
       tables: [] as TableQrRecord[],
     }
@@ -71,6 +71,18 @@ async function fetchWorkspaceData(eventId: string) {
   }
 }
 
+function formatEventDate(eventDate: string | null) {
+  if (!eventDate) {
+    return 'Fecha por definir'
+  }
+
+  return new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${eventDate}T00:00:00`))
+}
+
 export function EventWorkspacePage() {
   const navigate = useNavigate()
   const { eventId = '' } = useParams()
@@ -106,9 +118,7 @@ export function EventWorkspacePage() {
       setEvent(workspace.event)
       setTables(workspace.tables)
       setStatusMessage(
-        workspace.errorMessage
-          ? { text: workspace.errorMessage, tone: 'error' }
-          : null,
+        workspace.errorMessage ? { text: workspace.errorMessage, tone: 'error' } : null,
       )
 
       if (workspace.tables.length > 0) {
@@ -122,6 +132,13 @@ export function EventWorkspacePage() {
       isMounted = false
     }
   }, [accountSession, eventId])
+
+  async function refreshWorkspace(nextEventId: string) {
+    const workspace = await fetchWorkspaceData(nextEventId)
+    setEvent(workspace.event)
+    setTables(workspace.tables)
+    return workspace
+  }
 
   async function handleSignOut() {
     if (!supabase) {
@@ -143,7 +160,7 @@ export function EventWorkspacePage() {
 
     if (!Number.isInteger(desiredCount) || desiredCount <= 0) {
       setStatusMessage({
-        text: 'Escribe un numero de mesas valido mayor a cero.',
+        text: 'Escribe un número de mesas válido mayor a cero.',
         tone: 'error',
       })
       return
@@ -166,7 +183,7 @@ export function EventWorkspacePage() {
 
     if (missingRows.length === 0) {
       setStatusMessage({
-        text: 'No hay mesas faltantes. Todo ya esta configurado hasta ese numero.',
+        text: 'No hay mesas faltantes. Todo ya está configurado hasta ese número.',
         tone: 'success',
       })
       setIsGeneratingTables(false)
@@ -181,9 +198,7 @@ export function EventWorkspacePage() {
       return
     }
 
-    const workspace = await fetchWorkspaceData(event.id)
-    setEvent(workspace.event)
-    setTables(workspace.tables)
+    const workspace = await refreshWorkspace(event.id)
     setStatusMessage({
       text: `${missingRows.length} ${missingRows.length === 1 ? 'mesa fue creada' : 'mesas fueron creadas'} correctamente.`,
       tone: 'success',
@@ -192,6 +207,7 @@ export function EventWorkspacePage() {
     if (workspace.tables.length > 0) {
       setTargetTableCount(String(workspace.tables.length))
     }
+
     setIsGeneratingTables(false)
   }
 
@@ -220,11 +236,9 @@ export function EventWorkspacePage() {
       return
     }
 
-    const workspace = await fetchWorkspaceData(eventId)
-    setEvent(workspace.event)
-    setTables(workspace.tables)
+    await refreshWorkspace(eventId)
     setStatusMessage({
-      text: `La mesa ${table.table_number} se actualizo correctamente.`,
+      text: `La mesa ${table.table_number} se actualizó correctamente.`,
       tone: 'success',
     })
     setBusyTableId(null)
@@ -251,11 +265,9 @@ export function EventWorkspacePage() {
       return
     }
 
-    const workspace = await fetchWorkspaceData(eventId)
-    setEvent(workspace.event)
-    setTables(workspace.tables)
+    await refreshWorkspace(eventId)
     setStatusMessage({
-      text: `Se genero un nuevo token para la mesa ${table.table_number}.`,
+      text: `Se generó un nuevo código para la mesa ${table.table_number}.`,
       tone: 'success',
     })
     setBusyTableId(null)
@@ -263,23 +275,29 @@ export function EventWorkspacePage() {
 
   if (!hasSupabaseConfig) {
     return (
-      <section className="panel panel--centered">
-        <p className="eyebrow">Configuracion requerida</p>
-        <h1 className="page-title">Faltan las variables publicas de Supabase.</h1>
-        <p className="page-lead">
-          Agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en tu archivo
-          `.env` antes de usar el workspace del evento.
-        </p>
-      </section>
+      <PrivateEditorialLayout backLabel="Volver al dashboard" backTo="/dashboard">
+        <article className="dashboard-studio__status-card">
+          <p className="editorial-eyebrow">Configuración requerida</p>
+          <h1 className="dashboard-studio__status-title">
+            Faltan las variables públicas de Supabase.
+          </h1>
+          <p className="dashboard-studio__status-copy">
+            Agrega <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>{' '}
+            en tu archivo <code>.env</code> antes de usar el detalle del evento.
+          </p>
+        </article>
+      </PrivateEditorialLayout>
     )
   }
 
   if (isLoading) {
     return (
-      <section className="panel panel--centered">
-        <p className="eyebrow">Evento</p>
-        <h1 className="page-title">Cargando tu evento...</h1>
-      </section>
+      <PrivateEditorialLayout backLabel="Volver al dashboard" backTo="/dashboard">
+        <article className="dashboard-studio__status-card">
+          <p className="editorial-eyebrow">Detalle del evento</p>
+          <h1 className="dashboard-studio__status-title">Cargando tu evento...</h1>
+        </article>
+      </PrivateEditorialLayout>
     )
   }
 
@@ -289,25 +307,47 @@ export function EventWorkspacePage() {
 
   if (isBootstrapping) {
     return (
-      <section className="panel panel--centered">
-        <p className="eyebrow">Evento</p>
-        <h1 className="page-title">Preparando el workspace...</h1>
-      </section>
+      <PrivateEditorialLayout
+        backLabel="Volver al dashboard"
+        backTo="/dashboard"
+        rightSlot={
+          <button className="editorial-back-link" onClick={() => void handleSignOut()} type="button">
+            Cerrar sesión
+          </button>
+        }
+      >
+        <article className="dashboard-studio__status-card">
+          <p className="editorial-eyebrow">Detalle del evento</p>
+          <h1 className="dashboard-studio__status-title">Preparando el atelier...</h1>
+        </article>
+      </PrivateEditorialLayout>
     )
   }
 
   if (!event) {
     return (
-      <section className="panel panel--centered">
-        <p className="eyebrow">Evento no disponible</p>
-        <h1 className="page-title">No encontramos este espacio.</h1>
-        <p className="page-lead">
-          Puede que el evento no exista o que pertenezca a otra cuenta.
-        </p>
-        {statusMessage ? (
-          <p className="notice-banner notice-banner--error">{statusMessage.text}</p>
-        ) : null}
-      </section>
+      <PrivateEditorialLayout
+        backLabel="Volver al dashboard"
+        backTo="/dashboard"
+        rightSlot={
+          <button className="editorial-back-link" onClick={() => void handleSignOut()} type="button">
+            Cerrar sesión
+          </button>
+        }
+      >
+        <article className="dashboard-studio__status-card">
+          <p className="editorial-eyebrow">Evento no disponible</p>
+          <h1 className="dashboard-studio__status-title">No encontramos este espacio.</h1>
+          <p className="dashboard-studio__status-copy">
+            Puede que el evento no exista o que pertenezca a otra cuenta.
+          </p>
+          {statusMessage ? (
+            <p className="event-workspace__message event-workspace__message--error">
+              {statusMessage.text}
+            </p>
+          ) : null}
+        </article>
+      </PrivateEditorialLayout>
     )
   }
 
@@ -318,87 +358,156 @@ export function EventWorkspacePage() {
       return true
     }
 
-    return [
-      String(table.table_number),
-      table.table_label,
-      table.guest_group_name ?? '',
-      table.token,
-    ].some((value) => value.toLowerCase().includes(deferredTableQuery))
+    return [String(table.table_number), table.table_label, table.guest_group_name ?? ''].some(
+      (value) => value.toLowerCase().includes(deferredTableQuery),
+    )
   })
   const totalScans = tables.reduce((sum, table) => sum + table.scan_count, 0)
+  const activeTablesCount = tables.filter((table) => table.is_active).length
 
   return (
-    <section className="admin-dashboard">
-      <EventSetupPanel
-        activeTablesCount={tables.filter((table) => table.is_active).length}
-        event={event}
-        isGenerating={isGeneratingTables}
-        onDesiredTableCountChange={setTargetTableCount}
-        onGenerateMissingTables={handleGenerateMissingTables}
-        onSignOut={handleSignOut}
-        statusMessage={statusMessage}
-        tables={tables}
-        targetTableCount={targetTableCount}
-        totalScans={totalScans}
-      />
+    <PrivateEditorialLayout
+      backLabel="Volver al dashboard"
+      backTo="/dashboard"
+      className="dashboard-studio--event"
+      rightSlot={
+        <button className="editorial-back-link" onClick={() => void handleSignOut()} type="button">
+          Cerrar sesión
+        </button>
+      }
+    >
+      <section className="event-workspace">
+        <section className="event-workspace__hero">
+          <span className="editorial-eyebrow">Panel de Control</span>
+          <h1 className="event-workspace__title">{event.title}</h1>
+          <p className="event-workspace__date">{formatEventDate(event.event_date)}</p>
+        </section>
 
-      <section className="admin-dashboard__tables">
-        <div className="admin-dashboard__tables-header">
-          <div className="admin-dashboard__tables-heading">
-            <p className="eyebrow">Mesas y QR</p>
-            <h2 className="panel-title">Configura cada mesa con claridad.</h2>
-            <p className="helper-copy">
-              Mostrando {visibleTables.length} de {tables.length} mesas. Puedes
-              buscar por numero, familia o token.
-            </p>
+        <section className="event-workspace__stats">
+          <article className="event-workspace__stat-card">
+            <p>Mesas</p>
+            <strong>{tables.length}</strong>
+          </article>
+          <article className="event-workspace__stat-card">
+            <p>Escaneos</p>
+            <strong>{totalScans}</strong>
+          </article>
+        </section>
+
+        <section className="event-workspace__tables-section">
+          <div className="event-workspace__tables-heading">
+            <h2 className="event-workspace__section-title">Distribución de Mesas</h2>
+            <button
+              className="editorial-back-link"
+              onClick={() => setTableQuery('')}
+              type="button"
+            >
+              Ver todas
+            </button>
           </div>
 
-          <div className="field-group admin-dashboard__search">
-            <label className="field-label" htmlFor="table-search">
-              Buscar una mesa
+          <div className="event-workspace__search">
+            <label className="event-workspace__search-label" htmlFor="table-search">
+              Buscar mesa o familia
             </label>
             <input
-              className="text-input"
+              className="event-workspace__search-input"
               id="table-search"
               inputMode="search"
-              onChange={(event) => setTableQuery(event.target.value)}
-              placeholder="Mesa 12 o Familia Hernandez"
+              onChange={(currentEvent) => setTableQuery(currentEvent.target.value)}
+              placeholder="Mesa 12 o Familia Hernández"
               type="search"
               value={tableQuery}
             />
           </div>
-        </div>
 
-        {tables.length === 0 ? (
-          <article className="panel">
-            <p className="panel-subtitle">
-              Aun no existen mesas QR. Crea el primer bloque desde la tarjeta del
-              evento.
-            </p>
-          </article>
-        ) : visibleTables.length === 0 ? (
-          <article className="panel">
-            <h2 className="panel-title">No hay mesas que coincidan.</h2>
-            <p className="panel-subtitle">
-              Prueba con un numero de mesa, un apellido o borra la busqueda para
-              volver a ver todas las tarjetas.
-            </p>
-          </article>
-        ) : (
-          <div className="admin-dashboard__tables-grid">
-            {visibleTables.map((table) => (
-              <TableQrCard
-                baseUploadUrl={baseUploadUrl}
-                isBusy={busyTableId === table.id}
-                key={table.id}
-                onRegenerateToken={handleRegenerateToken}
-                onSave={handleSaveTable}
-                table={table}
-              />
-            ))}
+          <div className="event-workspace__table-list">
+            {tables.length === 0 ? (
+              <article className="event-workspace__empty-card">
+                <p className="event-workspace__empty-copy">
+                  Aún no existen mesas QR. Usa el bloque inferior para crear las primeras.
+                </p>
+              </article>
+            ) : visibleTables.length === 0 ? (
+              <article className="event-workspace__empty-card">
+                <p className="event-workspace__empty-copy">
+                  No encontramos mesas que coincidan con tu búsqueda.
+                </p>
+              </article>
+            ) : (
+              visibleTables.map((table) => (
+                <TableQrCard
+                  baseUploadUrl={baseUploadUrl}
+                  isBusy={busyTableId === table.id}
+                  key={table.id}
+                  onRegenerateToken={handleRegenerateToken}
+                  onSave={handleSaveTable}
+                  table={table}
+                />
+              ))
+            )}
           </div>
-        )}
+        </section>
+
+        <section className="event-workspace__promo">
+          <div className="event-workspace__promo-content">
+            <h3 className="event-workspace__promo-title">Acceso Instantáneo</h3>
+            <p className="event-workspace__promo-copy">
+              Crea una experiencia fluida generando los códigos QR para cada mesa.
+            </p>
+
+            <div className="event-workspace__promo-field">
+              <label className="event-workspace__promo-label" htmlFor="target-table-count">
+                Total de mesas
+              </label>
+              <input
+                className="event-workspace__promo-input"
+                id="target-table-count"
+                inputMode="numeric"
+                min="1"
+                onChange={(currentEvent) => setTargetTableCount(currentEvent.target.value)}
+                placeholder="24"
+                type="number"
+                value={targetTableCount}
+              />
+            </div>
+
+            <button
+              className="editorial-primary-button"
+              disabled={isGeneratingTables}
+              onClick={() => void handleGenerateMissingTables()}
+              type="button"
+            >
+              {isGeneratingTables ? 'Generando...' : 'Generar Todas'}
+            </button>
+          </div>
+
+          <div className="event-workspace__promo-pattern" aria-hidden="true" />
+        </section>
+
+        {statusMessage ? (
+          <p
+            className={
+              statusMessage.tone === 'error'
+                ? 'event-workspace__message event-workspace__message--error'
+                : 'event-workspace__message event-workspace__message--success'
+            }
+          >
+            {statusMessage.text}
+          </p>
+        ) : null}
+
+        <section className="event-workspace__summary">
+          <article className="event-workspace__summary-card">
+            <p>Mesas activas</p>
+            <strong>{activeTablesCount}</strong>
+          </article>
+          <article className="event-workspace__summary-card">
+            <p>Visitas al QR</p>
+            <strong>{totalScans}</strong>
+          </article>
+        </section>
       </section>
-    </section>
+    </PrivateEditorialLayout>
   )
 }

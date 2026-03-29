@@ -1,65 +1,85 @@
 import { Link } from 'react-router-dom'
 
-const landingHighlights = [
-  {
-    eyebrow: 'Dashboard privado',
-    title: 'La pareja entra por el dominio principal',
-    copy:
-      'Crea tu cuenta, abre tu dashboard y administra todos tus eventos desde una sola experiencia simple.',
-  },
-  {
-    eyebrow: 'Invitados sin friccion',
-    title: 'El formulario de fotos vive solo en el QR',
-    copy:
-      'Los invitados no necesitan buscar enlaces ni navegar por el sitio. Escanean su mesa y llegan directo a subir fotos.',
-  },
-  {
-    eyebrow: 'Trazabilidad elegante',
-    title: 'Cada subida queda organizada por evento y mesa',
-    copy:
-      'Las fotos se vinculan con mesa, nombre y dispositivo para que despues puedan revisarlas con contexto.',
-  },
-]
+const footerLinks = ['Nuestra Historia', 'Privacidad', 'Contacto']
 
 export function HomeLandingPage() {
   return (
-    <section className="landing">
-      <div className="landing__hero page-grid">
-        <div className="page-copy landing__copy">
-          <p className="eyebrow">Plataforma privada para bodas</p>
-          <h1 className="page-title landing__title">
-            Convierte cada mesa en un recuerdo compartido.
+    <div className="landing-stitch">
+      <header className="landing-stitch__header">
+        <div className="landing-stitch__header-inner">
+          <p className="landing-stitch__brand">WeddVue</p>
+        </div>
+      </header>
+
+      <main className="landing-stitch__main">
+        <section className="landing-stitch__hero">
+          <span className="landing-stitch__eyebrow">Una Experiencia Privada</span>
+
+          <h1 className="landing-stitch__title">
+            Toda la belleza de tu historia, capturada por quienes amas.
           </h1>
-          <p className="page-lead landing__lead">
-            Crea eventos, genera codigos QR por mesa y recibe fotos privadas de
-            tus invitados sin pedirles cuenta ni complicarles el momento.
+
+          <p className="landing-stitch__lead">
+            Preserva los momentos más íntimos y espontáneos de tu boda en una
+            galería compartida, privada y eterna.
           </p>
 
-          <div className="button-row">
-            <Link className="button landing__cta" to="/auth">
+          <div className="landing-stitch__media">
+            <div className="landing-stitch__hero-image-frame">
+              <img
+                alt="Fotografía editorial de una pareja de boda en un momento íntimo"
+                className="landing-stitch__hero-image"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmRE07iEywGTJtrX8MRqpS6kOv_YdRiAOZWw51O4EnWNP-pYD91DT5z7k9kIC7EOT_5CAVuZqDwoPxk3rGEWXWHd_nh2CBiETWowxrfuP_k-aDd6CrjAQ5F6j__BZDyYcvpu8gRP3JAKGKj7fExOdGQh_q9aQp1SDbetNu1S3PEIJSJIGPIhuiHU_RN_fWKa_ECVamL9sbLjGAiGlk9AOEFohLUdoUJouYO-yJi41QQFqxIFKN2TinspbxnbmV65PEMjMDN3q7Fw0"
+              />
+            </div>
+
+            <div className="landing-stitch__accent-card" aria-hidden="true">
+              <img
+                alt=""
+                className="landing-stitch__accent-image"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_Rk7m2zGIcWRHKOdz9cudl2zUIsztr0ytsjAstkccow4axZ1RDsionFVxmlUZuUUSFDdque05XRrkBG9q16qRB5QXVdUgvHLgBGOsrRzpUCxPHV7HmzbEpWzidRUkfjE50SST9qUuVa1st1yanewlJS7qPr3sRIA9pGg7V33JUH61JNnVbTlhMACulNvjvXimjngNwgXHkD6uFPJhJq4kjVfVPuRR9sF93eUFC1HD-jE-E432R2nCKhj2nsoA7KNl8uERxPrDaOw"
+              />
+            </div>
+          </div>
+
+          <div className="landing-stitch__actions">
+            <Link className="landing-stitch__primary-button" to="/auth">
               Me voy a casar
             </Link>
-            <Link className="button button--secondary" to="/auth">
+
+            <Link className="landing-stitch__secondary-link" to="/auth">
               Ya tengo cuenta
             </Link>
           </div>
+        </section>
 
-          <p className="helper-copy landing__note">
-            Si eres invitado, no necesitas entrar aqui: solo escanea el QR de tu
-            mesa y llegas directo a subir fotos.
+        <section className="landing-stitch__quote-section">
+          <div className="landing-stitch__quote-wrap">
+            <blockquote className="landing-stitch__quote">
+              “Lo que se ve con el corazón queda grabado para siempre.”
+            </blockquote>
+            <cite className="landing-stitch__quote-cite">WeddVue Anthology</cite>
+          </div>
+        </section>
+      </main>
+
+      <footer className="landing-stitch__footer">
+        <div className="landing-stitch__footer-inner">
+          <p className="landing-stitch__footer-brand">WeddVue</p>
+
+          <div className="landing-stitch__footer-links">
+            {footerLinks.map((label) => (
+              <a className="landing-stitch__footer-link" href="#" key={label}>
+                {label}
+              </a>
+            ))}
+          </div>
+
+          <p className="landing-stitch__footer-note">
+            © 2024 WeddVue. Un legado de amor.
           </p>
         </div>
-
-        <div className="landing__cards">
-          {landingHighlights.map((highlight) => (
-            <article className="panel landing-card" key={highlight.title}>
-              <p className="eyebrow">{highlight.eyebrow}</p>
-              <h2 className="panel-title">{highlight.title}</h2>
-              <p className="panel-subtitle">{highlight.copy}</p>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
+      </footer>
+    </div>
   )
 }

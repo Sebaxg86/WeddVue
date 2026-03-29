@@ -1,5 +1,5 @@
-import { startTransition, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { startTransition, useEffect, useState, type ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { AuthForm, type AuthMode } from '@/features/auth/components/AuthForm'
 import { hasSupabaseConfig } from '@/lib/config/env'
@@ -9,11 +9,58 @@ import {
   useSupabaseSession,
 } from '@/lib/supabase/useSupabaseSession'
 
-const authHighlights = [
-  'Crea un espacio privado para cada boda o celebracion.',
-  'Genera codigos QR por mesa y comparte el enlace correcto.',
-  'Administra todos tus eventos desde un dashboard pensado para movil.',
-]
+const footerLinks = ['Nuestra Historia', 'Privacidad', 'Contacto']
+
+type AuthPageStateProps = {
+  children: ReactNode
+}
+
+function AuthPageFrame({ children }: AuthPageStateProps) {
+  return (
+    <section className="auth-editorial-page">
+      <main className="auth-editorial-page__main">
+        <div className="auth-editorial-page__return-row">
+          <Link className="editorial-back-link" to="/">
+            Volver a la landing
+          </Link>
+        </div>
+
+        <div className="auth-editorial-page__brand-block">
+          <h1 className="auth-editorial-page__brand">WeddVue</h1>
+          <p className="auth-editorial-page__subtitle">Un momento para siempre</p>
+        </div>
+
+        <div className="auth-editorial-page__content">{children}</div>
+
+        <div className="auth-editorial-page__quote-wrap">
+          <p className="auth-editorial-page__quote">"El amor es el alma del hogar."</p>
+        </div>
+
+        <div className="auth-editorial-page__visual-anchor" aria-hidden="true">
+          <img
+            alt=""
+            className="auth-editorial-page__visual-image"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBf4J9oBYici2KFCynv0nspUbNmpCQCAOSCbDqbTdwHXbORhsoGxH0HrmDbrl1I2SAAL5XP_mf9YH1LYBGnhkKj3b6m-oJePHW545yNid3_GwfnlmfPHHv8uctWu2URcLQi6CrxMKsqFW4_G-7Bo8NVWbqreewqSMPX4FneQBQS4vojaDDGnleFR7ZJw6y5F7o-xzNYskqVOoK0QJkl5jWEvTJ7YhHyMzsdTwtXGHPk6j2t-ofW7gh5E83rg4F2xspPKZhfHe-9A2Q"
+          />
+        </div>
+      </main>
+
+      <footer className="auth-editorial-footer">
+        <div className="auth-editorial-footer__brand">WeddVue</div>
+        <div className="auth-editorial-footer__links">
+          {footerLinks.map((label) => (
+            <a className="auth-editorial-footer__link" href="#" key={label}>
+              {label}
+            </a>
+          ))}
+        </div>
+        <div className="auth-editorial-footer__note">
+          © 2024 WeddVue. Un momento para siempre.
+        </div>
+      </footer>
+    </section>
+  )
+}
 
 export function AuthPage() {
   const navigate = useNavigate()
@@ -41,7 +88,7 @@ export function AuthPage() {
     const normalizedEmail = email.trim().toLowerCase()
 
     if (!normalizedEmail || password.trim().length < 8) {
-      setErrorMessage('Escribe un correo valido y una contrasena de al menos 8 caracteres.')
+      setErrorMessage('Escribe un correo válido y una contraseña de al menos 8 caracteres.')
       setInfoMessage(null)
       return
     }
@@ -81,7 +128,7 @@ export function AuthPage() {
       })
     } else {
       setInfoMessage(
-        'Tu cuenta fue creada. Si tu proyecto pide confirmacion por correo, confirma tu email antes de entrar.',
+        'Tu cuenta fue creada. Si tu proyecto pide confirmación por correo, confirma tu email antes de entrar.',
       )
       setMode('signin')
     }
@@ -91,66 +138,59 @@ export function AuthPage() {
 
   if (!hasSupabaseConfig) {
     return (
-      <section className="panel panel--centered">
-        <p className="eyebrow">Configuracion requerida</p>
-        <h1 className="page-title">Faltan las variables publicas de Supabase.</h1>
-        <p className="page-lead">
-          Agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en tu archivo
-          `.env` para habilitar el acceso de cuentas.
-        </p>
-      </section>
+      <AuthPageFrame>
+        <article className="auth-editorial-card auth-editorial-card--status">
+          <header className="auth-editorial-card__header">
+            <h2 className="auth-editorial-card__title">Configuración requerida</h2>
+            <p className="auth-editorial-card__lead">
+              Agrega <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>{' '}
+              en tu archivo <code>.env</code> para habilitar el acceso de cuentas.
+            </p>
+          </header>
+        </article>
+      </AuthPageFrame>
     )
   }
 
   if (isLoading) {
     return (
-      <section className="panel panel--centered">
-        <p className="eyebrow">Acceso</p>
-        <h1 className="page-title">Preparando tu cuenta...</h1>
-      </section>
+      <AuthPageFrame>
+        <article className="auth-editorial-card auth-editorial-card--status">
+          <header className="auth-editorial-card__header">
+            <h2 className="auth-editorial-card__title">Preparando tu acceso</h2>
+            <p className="auth-editorial-card__lead">
+              Estamos verificando tu sesión para llevarte a tu espacio privado.
+            </p>
+          </header>
+        </article>
+      </AuthPageFrame>
     )
   }
 
   return (
-    <section className="page-grid auth-page">
-      <div className="page-copy auth-page__copy">
-        <p className="eyebrow">WeddVue para cualquier boda</p>
-        <h1 className="page-title auth-page__title">
-          De la landing al dashboard, sin rutas raras ni pasos escondidos.
-        </h1>
-        <p className="page-lead auth-page__lead">
-          La pareja entra por el dominio principal, crea su cuenta y administra
-          sus eventos. Los invitados solo ven el formulario de subida cuando
-          escanean el QR correcto de su mesa.
-        </p>
-
-        <ul className="feature-list">
-          {authHighlights.map((highlight) => (
-            <li key={highlight}>{highlight}</li>
-          ))}
-        </ul>
-
+    <AuthPageFrame>
+      <>
         {sessionErrorMessage ? (
-          <p className="notice-banner notice-banner--error">{sessionErrorMessage}</p>
+          <p className="auth-editorial-global-error">{sessionErrorMessage}</p>
         ) : null}
-      </div>
 
-      <AuthForm
-        email={email}
-        errorMessage={errorMessage}
-        infoMessage={infoMessage}
-        isSubmitting={isSubmitting}
-        mode={mode}
-        onEmailChange={setEmail}
-        onModeChange={(nextMode) => {
-          setMode(nextMode)
-          setErrorMessage(null)
-          setInfoMessage(null)
-        }}
-        onPasswordChange={setPassword}
-        onSubmit={handleSubmit}
-        password={password}
-      />
-    </section>
+        <AuthForm
+          email={email}
+          errorMessage={errorMessage}
+          infoMessage={infoMessage}
+          isSubmitting={isSubmitting}
+          mode={mode}
+          onEmailChange={setEmail}
+          onModeChange={(nextMode) => {
+            setMode(nextMode)
+            setErrorMessage(null)
+            setInfoMessage(null)
+          }}
+          onPasswordChange={setPassword}
+          onSubmit={handleSubmit}
+          password={password}
+        />
+      </>
+    </AuthPageFrame>
   )
 }

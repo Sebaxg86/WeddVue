@@ -20,7 +20,7 @@ type LocalMessage = {
 
 function formatLastScan(lastScannedAt: string | null) {
   if (!lastScannedAt) {
-    return 'Aun sin escaneos'
+    return 'Sin escaneos'
   }
 
   return new Intl.DateTimeFormat('es-MX', {
@@ -49,6 +49,7 @@ export function TableQrCard({
   const [isActive, setIsActive] = useState(table.is_active)
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [isGeneratingQr, setIsGeneratingQr] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(table.table_number <= 2)
   const [localMessage, setLocalMessage] = useState<LocalMessage | null>(null)
   const dismissTimerRef = useRef<number | null>(null)
 
@@ -67,6 +68,8 @@ export function TableQrCard({
     (table.guest_group_name ? sanitizeFileName(table.guest_group_name) : '') ||
     `mesa-${table.table_number}`
   const qrFileName = `weddvue-${fileLabel}-qr.png`
+  const cardTitle = table.guest_group_name || table.table_label
+  const cardSubtitle = `${table.table_label} • ${table.scan_count} ${table.scan_count === 1 ? 'escaneo' : 'escaneos'}`
 
   useEffect(() => {
     return () => {
@@ -86,7 +89,7 @@ export function TableQrCard({
         const { default: QRCode } = await import('qrcode')
         const nextQrDataUrl = await QRCode.toDataURL(uploadUrl, {
           color: {
-            dark: '#2f2a25',
+            dark: '#2f3331',
             light: '#ffffff',
           },
           errorCorrectionLevel: 'M',
@@ -199,7 +202,7 @@ export function TableQrCard({
 
       if (shareWindow) {
         pushLocalMessage({
-          text: 'QR abierto en una nueva pestana.',
+          text: 'QR abierto en una nueva pestaña.',
           tone: 'success',
         })
         return
@@ -213,122 +216,142 @@ export function TableQrCard({
   }
 
   return (
-    <article className="panel table-card">
-      <div className="table-card__header">
+    <article
+      className={
+        table.table_number === 1
+          ? 'event-workspace__table-card event-workspace__table-card--featured'
+          : 'event-workspace__table-card'
+      }
+    >
+      <div className="event-workspace__table-card-top">
         <div>
-          <p className="eyebrow">Mesa {table.table_number}</p>
-          <h2 className="panel-title">{table.table_label}</h2>
+          <h4 className="event-workspace__table-card-title">{cardTitle}</h4>
+          <p className="event-workspace__table-card-meta">{cardSubtitle}</p>
         </div>
-        <label className="toggle-field">
-          <input
-            checked={isActive}
-            onChange={(event) => setIsActive(event.target.checked)}
-            type="checkbox"
-          />
-          <span>{isActive ? 'Activa' : 'Inactiva'}</span>
-        </label>
+
+        <div className="event-workspace__table-card-pill">{table.table_number}</div>
       </div>
 
-      <div className="table-card__qr-frame">
-        {isGeneratingQr ? (
-          <div className="table-card__qr-placeholder">Generando QR...</div>
-        ) : qrDataUrl ? (
-          <img
-            alt={`QR de la mesa ${table.table_number}`}
-            className="table-card__qr-image"
-            src={qrDataUrl}
-          />
-        ) : (
-          <div className="table-card__qr-placeholder">No se pudo renderizar el QR</div>
-        )}
+      <div className="event-workspace__table-card-actions">
+        <button
+          className="event-workspace__table-link"
+          onClick={() => setIsExpanded((current) => !current)}
+          type="button"
+        >
+          {isExpanded ? 'Ocultar código QR' : 'Ver código QR'}
+        </button>
+
+        <button
+          className="event-workspace__table-link event-workspace__table-link--soft"
+          onClick={() => setIsActive((current) => !current)}
+          type="button"
+        >
+          {isActive ? 'Mesa activa' : 'Mesa inactiva'}
+        </button>
       </div>
 
-      <div className="field-group">
-        <label className="field-label" htmlFor={`group-name-${table.id}`}>
-          Familia o grupo
-        </label>
-        <input
-          className="text-input"
-          id={`group-name-${table.id}`}
-          onChange={(event) => setGroupName(event.target.value)}
-          placeholder="Ejemplo: Familia Hernandez"
-          type="text"
-          value={groupName}
-        />
-      </div>
+      {isExpanded ? (
+        <div className="event-workspace__table-card-details">
+          <div className="event-workspace__table-card-qr">
+            {isGeneratingQr ? (
+              <div className="event-workspace__table-card-qr-placeholder">Generando QR...</div>
+            ) : qrDataUrl ? (
+              <img
+                alt={`QR de la mesa ${table.table_number}`}
+                className="event-workspace__table-card-qr-image"
+                src={qrDataUrl}
+              />
+            ) : (
+              <div className="event-workspace__table-card-qr-placeholder">
+                No se pudo renderizar el QR
+              </div>
+            )}
+          </div>
 
-      <div className="table-card__meta">
-        <div className="info-card">
-          <span className="info-label">Token</span>
-          <strong className="info-value table-card__token">{table.token}</strong>
+          <div className="event-workspace__table-field">
+            <label className="event-workspace__table-field-label" htmlFor={`group-name-${table.id}`}>
+              Familia o grupo
+            </label>
+            <input
+              className="event-workspace__table-field-input"
+              id={`group-name-${table.id}`}
+              onChange={(event) => setGroupName(event.target.value)}
+              placeholder="Ejemplo: Familia Hernández"
+              type="text"
+              value={groupName}
+            />
+          </div>
+
+          <div className="event-workspace__table-metrics">
+            <div className="event-workspace__table-metric">
+              <span>Escaneos</span>
+              <strong>{table.scan_count}</strong>
+            </div>
+            <div className="event-workspace__table-metric">
+              <span>Último acceso</span>
+              <strong>{formatLastScan(table.last_scanned_at)}</strong>
+            </div>
+          </div>
+
+          <div className="event-workspace__table-button-row">
+            <button
+              className="editorial-primary-button editorial-primary-button--compact"
+              disabled={isBusy || !hasPendingChanges}
+              onClick={handleSave}
+              type="button"
+            >
+              Guardar mesa
+            </button>
+
+            <button
+              className="event-workspace__ghost-button"
+              disabled={!qrDataUrl || isBusy}
+              onClick={handleShareQr}
+              type="button"
+            >
+              {canShareFromDevice ? 'Compartir QR' : 'Abrir QR'}
+            </button>
+
+            <button
+              className="event-workspace__ghost-button"
+              disabled={!qrDataUrl || isBusy}
+              onClick={handleDownload}
+              type="button"
+            >
+              Descargar QR
+            </button>
+
+            <button
+              className="event-workspace__ghost-button"
+              disabled={isBusy}
+              onClick={handleCopyLink}
+              type="button"
+            >
+              Copiar enlace
+            </button>
+
+            <button
+              className="event-workspace__ghost-button"
+              disabled={isBusy}
+              onClick={() => onRegenerateToken(table)}
+              type="button"
+            >
+              Regenerar QR
+            </button>
+          </div>
+
+          {localMessage ? (
+            <p
+              className={
+                localMessage.tone === 'error'
+                  ? 'event-workspace__message event-workspace__message--error'
+                  : 'event-workspace__message event-workspace__message--success'
+              }
+            >
+              {localMessage.text}
+            </p>
+          ) : null}
         </div>
-        <div className="info-card">
-          <span className="info-label">Escaneos</span>
-          <strong className="info-value">{table.scan_count}</strong>
-        </div>
-        <div className="info-card">
-          <span className="info-label">Ultimo escaneo</span>
-          <strong className="info-value table-card__date">
-            {formatLastScan(table.last_scanned_at)}
-          </strong>
-        </div>
-      </div>
-
-      <div className="table-card__actions">
-        <button
-          className="button"
-          disabled={isBusy || !hasPendingChanges}
-          onClick={handleSave}
-          type="button"
-        >
-          Guardar mesa
-        </button>
-        <button
-          className="button button--secondary"
-          disabled={!qrDataUrl || isBusy}
-          onClick={handleShareQr}
-          type="button"
-        >
-          {canShareFromDevice ? 'Compartir QR' : 'Abrir QR'}
-        </button>
-        <button
-          className="button button--secondary"
-          disabled={isBusy}
-          onClick={() => onRegenerateToken(table)}
-          type="button"
-        >
-          Regenerar token
-        </button>
-        <button
-          className="button button--secondary"
-          disabled={!qrDataUrl || isBusy}
-          onClick={handleDownload}
-          type="button"
-        >
-          Descargar QR
-        </button>
-        <button
-          className="button button--secondary"
-          disabled={isBusy}
-          onClick={handleCopyLink}
-          type="button"
-        >
-          Copiar enlace
-        </button>
-      </div>
-
-      <p className="helper-copy table-card__url">{uploadUrl}</p>
-
-      {localMessage ? (
-        <p
-          className={
-            localMessage.tone === 'error'
-              ? 'notice-banner notice-banner--error'
-              : 'notice-banner notice-banner--success'
-          }
-        >
-          {localMessage.text}
-        </p>
       ) : null}
     </article>
   )

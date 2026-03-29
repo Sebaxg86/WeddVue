@@ -4,11 +4,13 @@ import type { EventSummary } from '@/features/events/lib/eventTypes'
 
 type EventCardProps = {
   event: EventSummary
+  imageAlt: string
+  imageUrl: string
 }
 
 function formatEventDate(eventDate: string | null) {
   if (!eventDate) {
-    return 'Fecha pendiente'
+    return 'Fecha por definir'
   }
 
   return new Intl.DateTimeFormat('es-MX', {
@@ -18,43 +20,18 @@ function formatEventDate(eventDate: string | null) {
   }).format(new Date(`${eventDate}T00:00:00`))
 }
 
-export function EventCard({ event }: EventCardProps) {
-  const totalTables = event.qr_codes?.length ?? 0
-  const activeTables =
-    event.qr_codes?.filter((table) => table.is_active).length ?? 0
-
+export function EventCard({ event, imageAlt, imageUrl }: EventCardProps) {
   return (
-    <article className="panel event-card">
-      <div className="event-card__header">
-        <div>
-          <p className="eyebrow">Evento</p>
-          <h2 className="panel-title">{event.title}</h2>
-          <p className="panel-subtitle">
-            {formatEventDate(event.event_date)} - slug: {event.slug}
-          </p>
-        </div>
-
-        <span className={event.is_active ? 'status-pill' : 'status-pill status-pill--soft'}>
-          {event.is_active ? 'Activo' : 'Pausado'}
-        </span>
+    <Link className="dashboard-studio__event-card" to={`/dashboard/events/${event.id}`}>
+      <div className="dashboard-studio__event-media">
+        <img alt={imageAlt} className="dashboard-studio__event-image" src={imageUrl} />
+        <div className="dashboard-studio__event-tint" aria-hidden="true" />
       </div>
 
-      <div className="event-card__metrics">
-        <div className="info-card">
-          <span className="info-label">Mesas</span>
-          <strong className="info-value">{totalTables}</strong>
-        </div>
-        <div className="info-card">
-          <span className="info-label">Mesas activas</span>
-          <strong className="info-value">{activeTables}</strong>
-        </div>
+      <div className="dashboard-studio__event-copy">
+        <h3 className="dashboard-studio__event-title">{event.title}</h3>
+        <p className="dashboard-studio__event-date">{formatEventDate(event.event_date)}</p>
       </div>
-
-      <div className="button-row">
-        <Link className="button" to={`/dashboard/events/${event.id}`}>
-          Abrir evento
-        </Link>
-      </div>
-    </article>
+    </Link>
   )
 }

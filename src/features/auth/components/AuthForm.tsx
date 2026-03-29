@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import type { FormEvent } from 'react'
 
 export type AuthMode = 'signin' | 'signup'
@@ -36,108 +35,96 @@ export function AuthForm({
   }
 
   return (
-    <article className="panel auth-card">
-      <div className="auth-card__header">
-        <p className="eyebrow">Acceso privado</p>
-        <h1 className="page-title auth-card__title">
-          {isSignUp ? 'Crea tu cuenta y empieza a organizar.' : 'Entra a tu panel privado.'}
-        </h1>
-        <p className="page-lead auth-card__lead">
+    <article className="auth-editorial-card">
+      <div className="auth-editorial-card__accent" aria-hidden="true" />
+
+      <header className="auth-editorial-card__header">
+        <h2 className="auth-editorial-card__title">
+          {isSignUp ? 'Crea tu espacio privado' : 'Bienvenido a su celebración'}
+        </h2>
+        <p className="auth-editorial-card__lead">
           {isSignUp
-            ? 'Abre tu espacio WeddVue, crea eventos y genera QRs por mesa para recibir fotos privadas.'
-            : 'Inicia sesion para volver a tu dashboard, administrar tus eventos y compartir los QRs de cada mesa.'}
+            ? 'Cree su cuenta para empezar a organizar sus eventos, mesas y códigos QR en un espacio íntimo y privado.'
+            : 'Por favor, introduzca sus credenciales para acceder a su espacio privado.'}
         </p>
-      </div>
+      </header>
 
-      <div className="auth-switch" aria-label="Modo de acceso" role="tablist">
-        <button
-          aria-selected={!isSignUp}
-          className={
-            !isSignUp
-              ? 'auth-switch__button auth-switch__button--active'
-              : 'auth-switch__button'
-          }
-          onClick={() => onModeChange('signin')}
-          role="tab"
-          type="button"
-        >
-          Iniciar sesion
-        </button>
-        <button
-          aria-selected={isSignUp}
-          className={
-            isSignUp
-              ? 'auth-switch__button auth-switch__button--active'
-              : 'auth-switch__button'
-          }
-          onClick={() => onModeChange('signup')}
-          role="tab"
-          type="button"
-        >
-          Crear cuenta
-        </button>
-      </div>
-
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <div className="field-group">
-          <label className="field-label" htmlFor="auth-email">
-            Correo
+      <form className="auth-editorial-form" onSubmit={handleSubmit}>
+        <div className="auth-editorial-field">
+          <label className="auth-editorial-field__label" htmlFor="auth-email">
+            Correo Electrónico
           </label>
           <input
             autoComplete="email"
-            className="text-input"
+            className="auth-editorial-field__input"
             id="auth-email"
             onChange={(event) => onEmailChange(event.target.value)}
-            placeholder="tu-correo@ejemplo.com"
+            placeholder="nombre@ejemplo.com"
             type="email"
             value={email}
           />
         </div>
 
-        <div className="field-group">
-          <label className="field-label" htmlFor="auth-password">
-            Contrasena
+        <div className="auth-editorial-field">
+          <label className="auth-editorial-field__label" htmlFor="auth-password">
+            Contraseña
           </label>
           <input
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
-            className="text-input"
+            className="auth-editorial-field__input"
             id="auth-password"
             minLength={8}
             onChange={(event) => onPasswordChange(event.target.value)}
-            placeholder="Minimo 8 caracteres"
+            placeholder="••••••••"
             type="password"
             value={password}
           />
         </div>
 
         {errorMessage ? (
-          <p className="notice-banner notice-banner--error">{errorMessage}</p>
+          <p className="auth-editorial-message auth-editorial-message--error">
+            {errorMessage}
+          </p>
         ) : null}
 
         {infoMessage ? (
-          <p className="notice-banner notice-banner--success">{infoMessage}</p>
+          <p className="auth-editorial-message auth-editorial-message--success">
+            {infoMessage}
+          </p>
         ) : null}
 
-        <button className="button" disabled={isSubmitting} type="submit">
-          {isSubmitting
-            ? isSignUp
-              ? 'Creando cuenta...'
-              : 'Entrando...'
-            : isSignUp
-              ? 'Crear mi cuenta'
-              : 'Entrar a mi dashboard'}
-        </button>
+        <div className="auth-editorial-form__actions">
+          <button className="auth-editorial-form__submit" disabled={isSubmitting} type="submit">
+            {isSubmitting
+              ? isSignUp
+                ? 'Creando cuenta...'
+                : 'Entrando...'
+              : isSignUp
+                ? 'Crear mi cuenta'
+                : 'Entrar'}
+          </button>
+
+          {!isSignUp ? (
+            <div className="auth-editorial-form__meta">
+              <button className="auth-editorial-form__link" type="button">
+                ¿Olvidó su contraseña?
+              </button>
+            </div>
+          ) : null}
+        </div>
       </form>
 
-      <p className="helper-copy">
-        Al continuar, tu panel privado sera el lugar para crear eventos, configurar
-        mesas y descargar recuerdos.
-      </p>
-
-      <div className="button-row">
-        <Link className="button button--secondary" to="/">
-          Volver al inicio
-        </Link>
+      <div className="auth-editorial-card__toggle">
+        <p className="auth-editorial-card__toggle-copy">
+          {isSignUp ? '¿Ya tiene una cuenta?' : '¿Aún no tiene una cuenta?'}
+        </p>
+        <button
+          className="auth-editorial-card__toggle-button"
+          onClick={() => onModeChange(isSignUp ? 'signin' : 'signup')}
+          type="button"
+        >
+          {isSignUp ? 'Iniciar sesión' : 'Crear mi cuenta'}
+        </button>
       </div>
     </article>
   )

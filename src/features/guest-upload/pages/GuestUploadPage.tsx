@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { PhotoSelectionSummary } from '@/features/guest-upload/components/PhotoSelectionSummary'
@@ -16,29 +16,75 @@ import {
 } from '@/features/guest-upload/lib/guestUploadSchema'
 import { hasSupabaseConfig } from '@/lib/config/env'
 import { getDeviceContext } from '@/lib/device/getDeviceContext'
-import { formatFileSize } from '@/shared/utils/formatFileSize'
-
-const uploadPromises = [
-  'Sin registro ni pasos complicados para los invitados.',
-  'Las fotos quedan privadas para la pareja.',
-  'Cada lote conserva trazabilidad por mesa, nombre y dispositivo.',
-]
 
 type StatusMessage = {
   text: string
   tone: 'error' | 'success'
 }
 
-function formatEventDate(eventDate: string | null) {
-  if (!eventDate) {
-    return 'Fecha pendiente'
+function buildRomanticHeading(title: string) {
+  const normalized = title
+    .trim()
+    .replace(/^enlace de\s+/i, '')
+    .replace(/^boda de\s+/i, '')
+    .replace(/^celebracion de\s+/i, '')
+
+  const ampersandParts = normalized.split(/\s*&\s*/).map((part) => part.trim())
+
+  if (ampersandParts.length === 2 && ampersandParts.every(Boolean)) {
+    return {
+      kind: 'pair' as const,
+      left: ampersandParts[0],
+      right: ampersandParts[1],
+    }
   }
 
-  return new Intl.DateTimeFormat('es-MX', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date(`${eventDate}T00:00:00`))
+  const yParts = normalized.split(/\s+y\s+/i).map((part) => part.trim())
+
+  if (yParts.length === 2 && yParts.every(Boolean)) {
+    return {
+      kind: 'pair' as const,
+      left: yParts[0],
+      right: yParts[1],
+    }
+  }
+
+  return {
+    kind: 'single' as const,
+    title: normalized || title,
+  }
+}
+
+function GuestUploadFrame({
+  children,
+  isToastVisible,
+}: {
+  children: ReactNode
+  isToastVisible: boolean
+}) {
+  return (
+    <section className="guest-upload">
+      {isToastVisible ? (
+        <div className="guest-upload__toast" role="status" aria-live="polite">
+          <div className="guest-upload__toast-card">
+            <span className="guest-upload__toast-mark">+</span>
+            <p className="guest-upload__toast-title">¡Gracias por este regalo!</p>
+            <p className="guest-upload__toast-copy">
+              Tus fotos ya son parte del recuerdo
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <nav className="guest-upload__nav">
+        <div className="guest-upload__nav-inner">
+          <span className="guest-upload__nav-brand">WeddVue</span>
+        </div>
+      </nav>
+
+      <main className="guest-upload__main">{children}</main>
+    </section>
+  )
 }
 
 export function GuestUploadPage() {
@@ -48,12 +94,11 @@ export function GuestUploadPage() {
   const [deviceContext] = useState(() => getDeviceContext())
   const [uploadContext, setUploadContext] = useState<GuestUploadContext | null>(null)
   const [contextError, setContextError] = useState<string | null>(null)
-  const [isLoadingContext, setIsLoadingContext] = useState(() =>
-    Boolean(hasSupabaseConfig),
-  )
+  const [isLoadingContext, setIsLoadingContext] = useState(() => Boolean(hasSupabaseConfig))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null)
   const [lastUploadResult, setLastUploadResult] = useState<SubmitGuestUploadResult | null>(null)
+  const [isToastVisible, setIsToastVisible] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<GuestUploadProgress>({
     completed: 0,
     currentFileName: null,
@@ -69,9 +114,9 @@ export function GuestUploadPage() {
     ? null
     : validation.error.issues[0]?.message ?? 'Completa los campos requeridos.'
 
-  const totalSelectedSize = selectedFiles.reduce(
-    (sum, file) => sum + file.size,
-    0,
+  const romanticHeading = useMemo(
+    () => buildRomanticHeading(uploadContext?.event_title ?? ''),
+    [uploadContext?.event_title],
   )
 
   useEffect(() => {
@@ -123,6 +168,21 @@ export function GuestUploadPage() {
     }
   }, [qrToken])
 
+  useEffect(() => {
+    if (!lastUploadResult) {
+      return
+    }
+
+    setIsToastVisible(true)
+    const timer = window.setTimeout(() => {
+      setIsToastVisible(false)
+    }, 5000)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [lastUploadResult])
+
   function handleFilesSelected(nextFiles: File[]) {
     const imageFiles = nextFiles.filter((file) => file.type.startsWith('image/'))
     const mergedFiles = [...selectedFiles]
@@ -145,6 +205,7 @@ export function GuestUploadPage() {
     setSelectedFiles(mergedFiles)
     setStatusMessage(null)
     setLastUploadResult(null)
+    setIsToastVisible(false)
   }
 
   function handleRemoveFile(indexToRemove: number) {
@@ -162,6 +223,7 @@ export function GuestUploadPage() {
     setIsSubmitting(true)
     setStatusMessage(null)
     setLastUploadResult(null)
+    setIsToastVisible(false)
     setUploadProgress({
       completed: 0,
       currentFileName: null,
@@ -181,13 +243,15 @@ export function GuestUploadPage() {
 
       setLastUploadResult(result)
       setSelectedFiles([])
-      setStatusMessage({
-        text:
-          result.failedFileNames.length > 0
-            ? `Se subieron ${result.uploadedCount} fotos. Algunas no pudieron procesarse: ${result.failedFileNames.join(', ')}.`
-            : `Tus ${result.uploadedCount} fotos se subieron correctamente.`,
-        tone: 'success',
-      })
+
+      if (result.failedFileNames.length > 0) {
+        setStatusMessage({
+          text: `Se subieron ${result.uploadedCount} fotos. Algunas no pudieron enviarse.`,
+          tone: 'success',
+        })
+      } else {
+        setStatusMessage(null)
+      }
     } catch (error) {
       const message =
         error instanceof Error
@@ -205,14 +269,18 @@ export function GuestUploadPage() {
 
   if (!hasSupabaseConfig) {
     return (
-      <section className="panel panel--centered">
-        <p className="eyebrow">Configuracion requerida</p>
-        <h1 className="page-title">Faltan las variables publicas de Supabase.</h1>
-        <p className="page-lead">
-          Agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en tu archivo
-          `.env` para usar el sitio.
-        </p>
-      </section>
+      <GuestUploadFrame isToastVisible={false}>
+        <div className="guest-upload__status">
+          <p className="editorial-eyebrow">Configuración requerida</p>
+          <h1 className="guest-upload__status-title">
+            Faltan las variables públicas de Supabase.
+          </h1>
+          <p className="guest-upload__status-copy">
+            Agrega <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code>{' '}
+            en tu archivo <code>.env</code> para usar el sitio.
+          </p>
+        </div>
+      </GuestUploadFrame>
     )
   }
 
@@ -223,175 +291,140 @@ export function GuestUploadPage() {
     isLoadingContext ||
     isSubmitting
 
+  const helperText = isSubmitting
+    ? `Procesando: ${uploadProgress.currentFileName || 'preparando envío'}`
+    : lastUploadResult && !statusMessage
+      ? 'Si quieres, puedes elegir más fotos y enviar otro lote.'
+      : validationMessage ||
+        'Tus fotos se guardan de forma privada y puedes compartir hasta 10 por envío.'
+
   return (
-    <section className="page-grid">
-      <div className="page-copy">
-        <p className="eyebrow">Sube tus recuerdos</p>
-        <h1 className="page-title">Comparte la boda desde tu mirada.</h1>
-        <p className="page-lead">
-          Escribe tu nombre, elige tus fotos favoritas y nosotros nos encargamos
-          de guardarlas en privado para la pareja.
-        </p>
-
-        <ul className="feature-list">
-          {uploadPromises.map((promise) => (
-            <li key={promise}>{promise}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="panel-stack">
-        <article className="panel panel--highlight">
-          <div className="panel-grid">
-            <div>
-              <h2 className="panel-title">Datos de tu mesa</h2>
-              <p className="panel-subtitle">
-                Esta informacion se asocia automaticamente al lote que subas.
-              </p>
+    <GuestUploadFrame isToastVisible={isToastVisible}>
+      {isLoadingContext ? (
+        <div className="guest-upload__status">
+          <p className="editorial-eyebrow">En honor a</p>
+          <h1 className="guest-upload__status-title">Estamos preparando tu espacio.</h1>
+          <p className="guest-upload__status-copy">
+            Validando el código de tu mesa para abrir el formulario correcto.
+          </p>
+        </div>
+      ) : contextError ? (
+        <div className="guest-upload__status">
+          <p className="editorial-eyebrow">No pudimos abrir esta mesa</p>
+          <h1 className="guest-upload__status-title">Intenta escanear el QR nuevamente.</h1>
+          <p className="guest-upload__status-copy">{contextError}</p>
+        </div>
+      ) : !qrToken ? (
+        <div className="guest-upload__status">
+          <p className="editorial-eyebrow">Acceso por invitación</p>
+          <h1 className="guest-upload__status-title">
+            Esta página se abre desde el QR de tu mesa.
+          </h1>
+          <p className="guest-upload__status-copy">
+            Si eres invitado, escanea el código impreso en tu mesa para compartir tus fotos de forma privada.
+          </p>
+        </div>
+      ) : uploadContext ? (
+        <div className="guest-upload__content">
+          <header className="guest-upload__hero">
+            <div className="guest-upload__eyebrow-wrap">
+              <span className="guest-upload__eyebrow">En honor a</span>
             </div>
 
-            {isLoadingContext ? (
-              <p className="helper-copy">Validando el codigo QR...</p>
-            ) : contextError ? (
-              <p className="notice-banner notice-banner--error">{contextError}</p>
-            ) : !qrToken ? (
-              <p className="warning-banner">
-                Escanea el QR impreso en tu mesa para abrir esta pagina.
-              </p>
-            ) : uploadContext ? (
-              <>
-                <div className="info-grid">
-                  <div className="info-card">
-                    <span className="info-label">Evento</span>
-                    <strong className="info-value">{uploadContext.event_title}</strong>
-                  </div>
-                  <div className="info-card">
-                    <span className="info-label">Mesa</span>
-                    <strong className="info-value">Mesa {uploadContext.table_number}</strong>
-                  </div>
-                  <div className="info-card">
-                    <span className="info-label">Grupo</span>
-                    <strong className="info-value">
-                      {uploadContext.guest_group_name || 'Sin nombre asignado'}
-                    </strong>
-                  </div>
-                  <div className="info-card">
-                    <span className="info-label">Tamano seleccionado</span>
-                    <strong className="info-value">
-                      {formatFileSize(totalSelectedSize)}
-                    </strong>
-                  </div>
-                </div>
+            {romanticHeading.kind === 'pair' ? (
+              <h1 className="guest-upload__title">
+                <span>{romanticHeading.left}</span>
+                <span className="guest-upload__ampersand">&amp;</span>
+                <span>{romanticHeading.right}</span>
+              </h1>
+            ) : (
+              <h1 className="guest-upload__title guest-upload__title--single">
+                <span>{romanticHeading.title}</span>
+              </h1>
+            )}
 
-                <p className="helper-copy">
-                  {formatEventDate(uploadContext.event_date)} -{' '}
-                  {uploadContext.table_label}
-                </p>
-              </>
-            ) : null}
-          </div>
-        </article>
-
-        {uploadContext ? (
-          <>
-            <article className="panel">
-              <div className="field-group">
-                <label className="field-label" htmlFor="guest-name">
-                  Tu nombre
-                </label>
-                <input
-                  className="text-input"
-                  id="guest-name"
-                  maxLength={120}
-                  onChange={(event) => setGuestName(event.target.value)}
-                  placeholder="Ejemplo: Sebastian, primo de la novia"
-                  type="text"
-                  value={guestName}
-                />
-              </div>
-
-              <UploadDropzone
-                onFilesSelected={handleFilesSelected}
-                remainingSlots={MAX_FILES_PER_BATCH - selectedFiles.length}
-              />
-
-              <PhotoSelectionSummary
-                files={selectedFiles}
-                onRemoveFile={handleRemoveFile}
-              />
-
-              {statusMessage ? (
-                <p
-                  className={
-                    statusMessage.tone === 'error'
-                      ? 'notice-banner notice-banner--error'
-                      : 'notice-banner notice-banner--success'
-                  }
-                >
-                  {statusMessage.text}
-                </p>
-              ) : null}
-
-              <div className="action-row">
-                <button
-                  className="button"
-                  disabled={isUploadDisabled}
-                  onClick={handleSubmitUpload}
-                  type="button"
-                >
-                  {isSubmitting
-                    ? `Subiendo ${uploadProgress.completed}/${uploadProgress.total || selectedFiles.length} fotos...`
-                    : 'Subir fotos'}
-                </button>
-                <p className="helper-copy">
-                  {isSubmitting
-                    ? `Procesando: ${uploadProgress.currentFileName || 'preparando lote'}`
-                  : validationMessage ||
-                      'Puedes subir hasta 10 fotos por lote. Las fotos se guardan en privado.'}
-                </p>
-              </div>
-
-              {lastUploadResult ? (
-                <p className="helper-copy">
-                  Lote registrado: {lastUploadResult.batchId}
-                </p>
-              ) : null}
-            </article>
-
-            <article className="panel">
-              <h2 className="panel-title">Trazabilidad del dispositivo</h2>
-              <div className="metric-grid">
-                <div className="metric-card">
-                  <span className="metric-label">Idioma</span>
-                  <strong className="metric-value">{deviceContext.language}</strong>
-                </div>
-                <div className="metric-card">
-                  <span className="metric-label">Zona horaria</span>
-                  <strong className="metric-value">{deviceContext.timezone}</strong>
-                </div>
-                <div className="metric-card">
-                  <span className="metric-label">Pantalla</span>
-                  <strong className="metric-value">
-                    {deviceContext.screenWidth} x {deviceContext.screenHeight}
-                  </strong>
-                </div>
-              </div>
-              <p className="helper-copy">
-                Estos datos se guardan junto con el lote para mantener la
-                trazabilidad de cada subida.
-              </p>
-            </article>
-          </>
-        ) : (
-          <article className="panel">
-            <h2 className="panel-title">Esta pantalla funciona solo con el QR de la mesa.</h2>
-            <p className="panel-subtitle">
-              Si eres invitado, escanea el codigo impreso en tu mesa para abrir el
-              formulario correcto de subida.
+            <p className="guest-upload__lead">
+              Ayúdanos a capturar la magia de este día a través de tu lente
             </p>
-          </article>
-        )}
-      </div>
-    </section>
+          </header>
+
+          <section className="guest-upload__interaction">
+            <div className="guest-upload__name-field">
+              <label className="guest-upload__name-label" htmlFor="guest-name">
+                ¿Quién nos acompaña?
+              </label>
+              <input
+                className="guest-upload__name-input"
+                id="guest-name"
+                maxLength={120}
+                onChange={(event) => setGuestName(event.target.value)}
+                placeholder="Tu nombre aquí"
+                type="text"
+                value={guestName}
+              />
+            </div>
+
+            <UploadDropzone
+              disabled={isSubmitting}
+              onFilesSelected={handleFilesSelected}
+              remainingSlots={MAX_FILES_PER_BATCH - selectedFiles.length}
+              selectedCount={selectedFiles.length}
+            />
+
+            <PhotoSelectionSummary
+              files={selectedFiles}
+              onRemoveFile={handleRemoveFile}
+            />
+
+            {statusMessage ? (
+              <p
+                className={
+                  statusMessage.tone === 'error'
+                    ? 'guest-upload__message guest-upload__message--error'
+                    : 'guest-upload__message guest-upload__message--success'
+                }
+              >
+                {statusMessage.text}
+              </p>
+            ) : null}
+
+            <div className="guest-upload__submit-wrap">
+              <button
+                className="editorial-primary-button guest-upload__submit"
+                disabled={isUploadDisabled}
+                onClick={handleSubmitUpload}
+                type="button"
+              >
+                {isSubmitting
+                  ? `Subiendo ${uploadProgress.completed}/${uploadProgress.total || selectedFiles.length}`
+                  : 'Enviar al Álbum'}
+              </button>
+
+              <div className="guest-upload__microcopy">
+                <span className="guest-upload__microcopy-dot" />
+                <p>Se añadirán instantáneamente</p>
+                <span className="guest-upload__microcopy-dot" />
+              </div>
+
+              <p className="guest-upload__helper">{helperText}</p>
+            </div>
+          </section>
+
+          <footer className="guest-upload__footer">
+            <p className="guest-upload__footer-title">Gracias de todo corazón</p>
+            <div className="guest-upload__footer-divider" aria-hidden="true" />
+            <div className="guest-upload__footer-links">
+              <a className="guest-upload__footer-link" href="#">
+                Privacidad
+              </a>
+              <a className="guest-upload__footer-link" href="#">
+                Contacto
+              </a>
+            </div>
+            <p className="guest-upload__footer-note">© 2024 WeddVue</p>
+          </footer>
+        </div>
+      ) : null}
+    </GuestUploadFrame>
   )
 }
