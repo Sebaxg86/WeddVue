@@ -14,6 +14,7 @@ import {
   guestUploadSchema,
   MAX_FILES_PER_BATCH,
 } from '@/features/guest-upload/lib/guestUploadSchema'
+import { getPublicEventGuestImageUrl } from '@/features/events/lib/eventAssetStorage'
 import { hasSupabaseConfig } from '@/lib/config/env'
 import { getDeviceContext } from '@/lib/device/getDeviceContext'
 
@@ -27,7 +28,7 @@ function buildRomanticHeading(title: string) {
     .trim()
     .replace(/^enlace de\s+/i, '')
     .replace(/^boda de\s+/i, '')
-    .replace(/^celebracion de\s+/i, '')
+    .replace(/^celebraci[oó]n de\s+/i, '')
 
   const ampersandParts = normalized.split(/\s*&\s*/).map((part) => part.trim())
 
@@ -117,6 +118,10 @@ export function GuestUploadPage() {
   const romanticHeading = useMemo(
     () => buildRomanticHeading(uploadContext?.event_title ?? ''),
     [uploadContext?.event_title],
+  )
+  const guestUploadImageUrl = useMemo(
+    () => getPublicEventGuestImageUrl(uploadContext?.guest_upload_image_path ?? null),
+    [uploadContext?.guest_upload_image_path],
   )
 
   useEffect(() => {
@@ -366,6 +371,7 @@ export function GuestUploadPage() {
 
             <UploadDropzone
               disabled={isSubmitting}
+              imageUrl={guestUploadImageUrl}
               onFilesSelected={handleFilesSelected}
               remainingSlots={MAX_FILES_PER_BATCH - selectedFiles.length}
               selectedCount={selectedFiles.length}

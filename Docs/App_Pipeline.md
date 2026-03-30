@@ -30,10 +30,11 @@ This document explains the runtime flow of the current WeddVue app.
 ## 3. Event Workspace Pipeline
 
 1. The owner opens `/dashboard/events/:eventId`.
-2. [EventWorkspacePage.tsx](../src/features/events/pages/EventWorkspacePage.tsx) loads the event and its `qr_codes`.
-3. [EventSetupPanel.tsx](../src/features/events/components/EventSetupPanel.tsx) lets the owner create missing tables.
-4. [TableQrCard.tsx](../src/features/events/components/TableQrCard.tsx) lets the owner rename the group, enable or disable the table, regenerate tokens, and share or download the QR.
-5. Each QR points to `/upload?t=<qr-token>`.
+2. [EventWorkspacePage.tsx](../src/features/events/pages/EventWorkspacePage.tsx) loads the event, its `qr_codes`, related upload data, and the private gallery context.
+3. The `Mesas` tab lets the owner create missing tables and manage each table through [TableQrCard.tsx](../src/features/events/components/TableQrCard.tsx).
+4. The `Galeria privada` tab renders photo cards through [EventPhotoCard.tsx](../src/features/events/components/EventPhotoCard.tsx) and deep preview through [EventGalleryLightbox.tsx](../src/features/events/components/EventGalleryLightbox.tsx).
+5. The `Ajustes del evento` tab updates the title, date, cover image, and guest upload image through [EventImageField.tsx](../src/features/events/components/EventImageField.tsx) and [eventAssetStorage.ts](../src/features/events/lib/eventAssetStorage.ts).
+6. Each QR points to `/upload?t=<qr-token>`.
 
 ## 4. Guest Upload Runtime Pipeline
 

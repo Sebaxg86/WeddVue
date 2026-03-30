@@ -2,6 +2,7 @@ import { useId } from 'react'
 
 type UploadDropzoneProps = {
   disabled?: boolean
+  imageUrl?: string | null
   onFilesSelected: (files: File[]) => void
   remainingSlots: number
   selectedCount: number
@@ -9,6 +10,7 @@ type UploadDropzoneProps = {
 
 export function UploadDropzone({
   disabled = false,
+  imageUrl = null,
   onFilesSelected,
   remainingSlots,
   selectedCount,
@@ -20,7 +22,10 @@ export function UploadDropzone({
       <img
         alt="Ambiente editorial de boda en tonos suaves"
         className="guest-upload__picker-image"
-        src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1czbLtCkN4M7kaipHlgtecB_GMwB0OMEQ3ev3OwKDzOQIz5Mac0MTw1UwRRnPnV4DD2W3R-K3MCY2CPRuLU473FYYSC-jTstHuXgXtcyYFEvW2GQ_obOc8fboKFi9J7ZhK_Sdc3mUh1sm9OPRohoIEo6_3h10xnsl8yYMY1P84iG-Xo4DTxbxIxdHyR6fMYiRpkuOO7Ume29VYyxZcYTPFYZQSDzZh-uYbHAjq-5s_wt8ASw-ZE7fPbILjbFwY37WKSKHRB_d2ZU"
+        src={
+          imageUrl ||
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuB1czbLtCkN4M7kaipHlgtecB_GMwB0OMEQ3ev3OwKDzOQIz5Mac0MTw1UwRRnPnV4DD2W3R-K3MCY2CPRuLU473FYYSC-jTstHuXgXtcyYFEvW2GQ_obOc8fboKFi9J7ZhK_Sdc3mUh1sm9OPRohoIEo6_3h10xnsl8yYMY1P84iG-Xo4DTxbxIxdHyR6fMYiRpkuOO7Ume29VYyxZcYTPFYZQSDzZh-uYbHAjq-5s_wt8ASw-ZE7fPbILjbFwY37WKSKHRB_d2ZU'
+        }
       />
       <div className="guest-upload__picker-overlay" aria-hidden="true" />
 

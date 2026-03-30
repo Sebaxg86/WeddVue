@@ -23,7 +23,7 @@ WeddVue now behaves like a reusable wedding product:
 4. The account enters `/dashboard`.
 5. The dashboard lists only the events owned by that account.
 6. The owner creates a new event or opens an existing one.
-7. Inside the event workspace, the owner generates tables, assigns family names, and shares QR codes.
+7. Inside the event workspace, the owner manages 3 areas: tables and QR, private gallery, and event settings.
 
 ### Guest Upload Flow
 
@@ -44,6 +44,7 @@ WeddVue now behaves like a reusable wedding product:
 - Guest upload pages can run on anonymous Supabase sessions.
 - The app distinguishes anonymous sessions from real owner sessions in the frontend.
 - The storage bucket remains private.
+- Event visual assets use separate buckets for private cover images and guest-facing upload images.
 - Event ownership lives in `events.owner_user_id`.
 - RLS allows an owner to see only their own events, QR codes, upload batches, photos, and related storage objects.
 - `admin_profiles` can still exist as an optional super-admin mechanism or for legacy compatibility.
@@ -53,7 +54,7 @@ WeddVue now behaves like a reusable wedding product:
 
 ### `events`
 
-Represents one wedding or celebration and belongs to an account through `owner_user_id`.
+Represents one wedding or celebration, belongs to an account through `owner_user_id`, and stores the optional cover image path and guest upload image path.
 
 ### `qr_codes`
 

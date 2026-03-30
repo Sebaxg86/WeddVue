@@ -63,6 +63,12 @@ Vite will print the local URL, typically:
 http://localhost:5173
 ```
 
+Optional, if you add new source images to the landing carousel:
+
+```bash
+npm run optimize:home-carousel
+```
+
 ## 5. Quick Test Routes
 
 - Public landing: `http://localhost:5173/`
@@ -110,4 +116,5 @@ src/
 1. Guest upload flow from QR token to private bucket.
 2. Owner auth and multi-event dashboard.
 3. Event QR and table setup workspace.
-4. Optional hardening with Turnstile and Edge Functions.
+4. Private gallery, event settings, and visual event assets.
+5. Optional hardening with Turnstile and Edge Functions.

@@ -3,6 +3,12 @@ import { Navigate, useNavigate } from 'react-router-dom'
 
 import { CreateEventPanel } from '@/features/dashboard/components/CreateEventPanel'
 import { EventCard } from '@/features/dashboard/components/EventCard'
+import {
+  createEventCoverUrlMap,
+  removeEventAsset,
+  uploadEventAsset,
+  type EventAssetKind,
+} from '@/features/events/lib/eventAssetStorage'
 import type { EventSummary } from '@/features/events/lib/eventTypes'
 import { hasSupabaseConfig } from '@/lib/config/env'
 import { supabase } from '@/lib/supabase/client'
@@ -16,6 +22,8 @@ type StatusMessage = {
   text: string
   tone: 'error' | 'success'
 }
+
+const WORKSPACE_STATUS_STORAGE_KEY = 'weddvue_workspace_status'
 
 const eventVisuals = [
   {
@@ -43,14 +51,26 @@ async function fetchOwnedEvents(userId: string) {
   const { data, error } = await supabase
     .from('events')
     .select(
-      'id, slug, title, event_date, is_active, owner_user_id, created_at, qr_codes(id, is_active)',
+      'id, slug, title, event_date, is_active, owner_user_id, created_at, cover_image_path, guest_upload_image_path, qr_codes(id, is_active)',
     )
     .eq('owner_user_id', userId)
     .order('created_at', { ascending: false })
 
+  const events = (data ?? []) as EventSummary[]
+  const coverUrlMap = await createEventCoverUrlMap(
+    events
+      .map((event) => event.cover_image_path)
+      .filter((path): path is string => Boolean(path)),
+  )
+
   return {
     errorMessage: error?.message ?? null,
-    events: (data ?? []) as EventSummary[],
+    events: events.map((event) => ({
+      ...event,
+      cover_image_url: event.cover_image_path
+        ? coverUrlMap.get(event.cover_image_path) ?? null
+        : null,
+    })),
   }
 }
 
@@ -71,8 +91,10 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const { errorMessage: sessionErrorMessage, isLoading, session } = useSupabaseSession()
   const [events, setEvents] = useState<EventSummary[]>([])
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
   const [eventTitle, setEventTitle] = useState('')
   const [eventDate, setEventDate] = useState('')
+  const [guestImageFile, setGuestImageFile] = useState<File | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isLoadingEvents, setIsLoadingEvents] = useState(false)
   const [isComposerOpen, setIsComposerOpen] = useState(false)
@@ -113,6 +135,22 @@ export function DashboardPage() {
     }
   }, [accountSession])
 
+  function clearComposerState() {
+    setCoverImageFile(null)
+    setEventDate('')
+    setEventTitle('')
+    setGuestImageFile(null)
+  }
+
+  function closeComposer() {
+    if (isCreating) {
+      return
+    }
+
+    clearComposerState()
+    setIsComposerOpen(false)
+  }
+
   async function handleCreateEvent() {
     if (!supabase || !accountSession) {
       return
@@ -130,6 +168,11 @@ export function DashboardPage() {
 
     setIsCreating(true)
     setStatusMessage(null)
+
+    const nextStatusForWorkspace: StatusMessage = {
+      text: 'Evento creado. Vamos a abrir su atelier privado.',
+      tone: 'success',
+    }
 
     const { data, error } = await supabase
       .from('events')
@@ -152,12 +195,69 @@ export function DashboardPage() {
       return
     }
 
-    setEventTitle('')
-    setEventDate('')
-    setStatusMessage({
-      text: 'Evento creado. Vamos a abrir su atelier privado.',
-      tone: 'success',
-    })
+    const uploadedAssets: Array<{ kind: EventAssetKind; path: string }> = []
+    const eventUpdates: {
+      cover_image_path?: string | null
+      guest_upload_image_path?: string | null
+    } = {}
+
+    try {
+      if (coverImageFile) {
+        const result = await uploadEventAsset({
+          eventId: data.id,
+          file: coverImageFile,
+          kind: 'cover',
+          ownerUserId: accountSession.user.id,
+        })
+
+        uploadedAssets.push({ kind: 'cover', path: result.path })
+        eventUpdates.cover_image_path = result.path
+      }
+
+      if (guestImageFile) {
+        const result = await uploadEventAsset({
+          eventId: data.id,
+          file: guestImageFile,
+          kind: 'guest',
+          ownerUserId: accountSession.user.id,
+        })
+
+        uploadedAssets.push({ kind: 'guest', path: result.path })
+        eventUpdates.guest_upload_image_path = result.path
+      }
+
+      if (Object.keys(eventUpdates).length > 0) {
+        const { error: updateError } = await supabase
+          .from('events')
+          .update(eventUpdates)
+          .eq('id', data.id)
+
+        if (updateError) {
+          throw new Error(updateError.message)
+        }
+      }
+    } catch (assetError) {
+      await Promise.all(
+        uploadedAssets.map((asset) => removeEventAsset(asset.kind, asset.path)),
+      )
+
+      nextStatusForWorkspace.text =
+        assetError instanceof Error
+          ? `Evento creado, pero no pudimos guardar sus imagenes. ${assetError.message}`
+          : 'Evento creado, pero no pudimos guardar sus imagenes. Podras intentarlo desde el panel del evento.'
+    }
+
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(
+        WORKSPACE_STATUS_STORAGE_KEY,
+        JSON.stringify({
+          eventId: data.id,
+          ...nextStatusForWorkspace,
+        }),
+      )
+    }
+
+    clearComposerState()
     setIsCreating(false)
     setIsComposerOpen(false)
 
@@ -179,7 +279,7 @@ export function DashboardPage() {
 
   if (!hasSupabaseConfig) {
     return (
-      <PrivateEditorialLayout backLabel="Volver a la landing" backTo="/">
+      <PrivateEditorialLayout backLabel="Inicio" backTo="/">
         <article className="dashboard-studio__status-card">
           <p className="editorial-eyebrow">Configuración requerida</p>
           <h1 className="dashboard-studio__status-title">
@@ -196,7 +296,7 @@ export function DashboardPage() {
 
   if (isLoading) {
     return (
-      <PrivateEditorialLayout backLabel="Volver a la landing" backTo="/">
+      <PrivateEditorialLayout backLabel="Inicio" backTo="/">
         <article className="dashboard-studio__status-card">
           <p className="editorial-eyebrow">Atelier privado</p>
           <h1 className="dashboard-studio__status-title">Cargando tu cuenta...</h1>
@@ -211,17 +311,21 @@ export function DashboardPage() {
 
   return (
     <PrivateEditorialLayout
-      backLabel="Volver a la landing"
+      backLabel="Inicio"
       backTo="/"
       rightSlot={
-        <button className="editorial-back-link" onClick={() => void handleSignOut()} type="button">
+        <button
+          className="dashboard-studio__header-action dashboard-studio__header-action--session"
+          onClick={() => void handleSignOut()}
+          type="button"
+        >
           Cerrar sesión
         </button>
       }
     >
       <section className="dashboard-studio__hero">
         <div className="dashboard-studio__hero-copy">
-          <span className="editorial-eyebrow">Bienvenida a su atelier</span>
+          <span className="editorial-eyebrow">Bienvenido a su atelier</span>
           <h1 className="dashboard-studio__title">Un momento para siempre</h1>
         </div>
       </section>
@@ -230,7 +334,7 @@ export function DashboardPage() {
         <button
           className="dashboard-studio__create-trigger"
           onClick={() => {
-            setIsComposerOpen((current) => !current)
+            setIsComposerOpen(true)
             setStatusMessage(null)
           }}
           type="button"
@@ -243,21 +347,27 @@ export function DashboardPage() {
       </section>
 
       {isComposerOpen ? (
-        <section className="dashboard-studio__composer-wrap">
-          <CreateEventPanel
-            eventDate={eventDate}
-            eventTitle={eventTitle}
-            isCreating={isCreating}
-            onClose={() => setIsComposerOpen(false)}
-            onCreateEvent={handleCreateEvent}
-            onEventDateChange={setEventDate}
-            onEventTitleChange={setEventTitle}
-            statusMessage={
-              statusMessage ??
-              (sessionErrorMessage ? { text: sessionErrorMessage, tone: 'error' } : null)
-            }
-          />
-        </section>
+        <CreateEventPanel
+          coverImageFile={coverImageFile}
+          eventDate={eventDate}
+          eventTitle={eventTitle}
+          guestImageFile={guestImageFile}
+          isCreating={isCreating}
+          onClose={closeComposer}
+          onCoverImageChange={setCoverImageFile}
+          onCreateEvent={handleCreateEvent}
+          onEventDateChange={setEventDate}
+          onEventTitleChange={setEventTitle}
+          onGuestImageChange={setGuestImageFile}
+          statusMessage={
+            statusMessage ??
+            (sessionErrorMessage ? { text: sessionErrorMessage, tone: 'error' } : null)
+          }
+        />
+      ) : null}
+
+      {isComposerOpen ? (
+        null
       ) : sessionErrorMessage || statusMessage ? (
         <section className="dashboard-studio__composer-wrap">
           <p

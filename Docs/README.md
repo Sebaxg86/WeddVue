@@ -9,6 +9,8 @@ Technical documentation for the WeddVue repository.
 - [App Pipeline](App_Pipeline.md)
 - [Module Map](Module_Map.md)
 - [Database Docs](Db/README.md)
+- [WeddVue Stitch Prompt](Prompting/WeddVue_Stitch_Prompt.md)
+- [Home Carousel Image Prompts](Prompting/WeddVue_Home_Carousel_Image_Prompts.md)
 
 ## Database File Convention
 
@@ -27,3 +29,4 @@ Technical documentation for the WeddVue repository.
 6. Run [Migration_Script.sql](Db/Migration_Script.sql) in Supabase SQL Editor when applying database changes.
 7. Use [Database_schema.sql](Db/Database_schema.sql) as a read-only reference of the current database state.
 8. Use [Supabase_seed_template.sql](Db/Supabase_seed_template.sql) only when you need a manual SQL seed for an owner-linked event and QR rows.
+9. Use [WeddVue_Stitch_Prompt.md](Prompting/WeddVue_Stitch_Prompt.md) and [WeddVue_Home_Carousel_Image_Prompts.md](Prompting/WeddVue_Home_Carousel_Image_Prompts.md) as visual prompting references, not as product source-of-truth.

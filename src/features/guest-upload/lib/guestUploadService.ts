@@ -12,6 +12,7 @@ type UploadBatchStatus = 'completed' | 'failed'
 export type GuestUploadContext = {
   event_date: string | null
   event_id: string
+  guest_upload_image_path: string | null
   event_title: string
   guest_group_name: string | null
   qr_code_id: string

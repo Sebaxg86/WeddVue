@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 
 export function AppShell() {
@@ -25,6 +26,31 @@ export function AppShell() {
       : isAuthRoute
         ? 'Crea tu cuenta o entra a tu dashboard'
         : 'Recuerdos privados para bodas y celebraciones'
+
+  useEffect(() => {
+    if (!('scrollRestoration' in window.history)) {
+      return
+    }
+
+    const previousScrollRestoration = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+
+    return () => {
+      window.history.scrollRestoration = previousScrollRestoration
+    }
+  }, [])
+
+  useEffect(() => {
+    const nextFrame = window.requestAnimationFrame(() => {
+      window.scrollTo({ left: 0, top: 0, behavior: 'auto' })
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    })
+
+    return () => {
+      window.cancelAnimationFrame(nextFrame)
+    }
+  }, [location.pathname, location.search])
 
   return (
     <div

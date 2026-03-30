@@ -3,6 +3,7 @@
 -- 1. Move from single-event admin flow to account-owned multi-event dashboard
 -- 2. Keep frictionless guest uploads through anonymous Supabase sessions
 -- 3. Align RLS for owners, optional super-admins, and private storage access
+-- 4. Support custom event cover images and guest-upload hero images
 
 alter type public.photo_status add value if not exists 'uploaded';
 alter type public.upload_batch_status add value if not exists 'completed';
@@ -10,6 +11,12 @@ alter type public.upload_batch_status add value if not exists 'failed';
 
 alter table public.events
   add column if not exists owner_user_id uuid;
+
+alter table public.events
+  add column if not exists cover_image_path text;
+
+alter table public.events
+  add column if not exists guest_upload_image_path text;
 
 alter table public.upload_batches
   add column if not exists guest_auth_user_id uuid;
@@ -77,6 +84,12 @@ create index if not exists idx_upload_batches_guest_auth_user_id
 
 comment on column public.events.owner_user_id is
 'auth.users id of the account that owns the event.';
+
+comment on column public.events.cover_image_path is
+'Path in storage bucket event-assets-private for the dashboard/private cover image.';
+
+comment on column public.events.guest_upload_image_path is
+'Path in storage bucket event-assets-public for the guest upload hero image.';
 
 comment on column public.upload_batches.guest_auth_user_id is
 'auth.users id used for frictionless anonymous guest uploads.';
@@ -228,12 +241,57 @@ $$;
 revoke all on function public.can_manage_storage_object(text, uuid) from public;
 grant execute on function public.can_manage_storage_object(text, uuid) to authenticated;
 
+create or replace function public.can_manage_event_asset_object(p_object_name text, p_user_id uuid)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  owner_id_text text;
+  event_id_text text;
+  event_id uuid;
+begin
+  owner_id_text := nullif(split_part(coalesce(p_object_name, ''), '/', 1), '');
+  event_id_text := nullif(split_part(coalesce(p_object_name, ''), '/', 2), '');
+
+  if owner_id_text is null or event_id_text is null then
+    return false;
+  end if;
+
+  begin
+    event_id := event_id_text::uuid;
+  exception
+    when invalid_text_representation then
+      return false;
+  end;
+
+  return exists (
+    select 1
+    from public.events as e
+    where e.id = event_id
+      and e.owner_user_id::text = owner_id_text
+      and (
+        e.owner_user_id = p_user_id
+        or public.is_admin(p_user_id)
+      )
+  );
+end;
+$$;
+
+revoke all on function public.can_manage_event_asset_object(text, uuid) from public;
+grant execute on function public.can_manage_event_asset_object(text, uuid) to authenticated;
+
+drop function if exists public.get_guest_upload_context(text);
+
 create or replace function public.get_guest_upload_context(p_token text)
 returns table (
   qr_code_id uuid,
   event_id uuid,
   event_title text,
   event_date date,
+  guest_upload_image_path text,
   table_number integer,
   table_label text,
   guest_group_name text
@@ -250,6 +308,7 @@ begin
     qr.event_id,
     e.title,
     e.event_date,
+    e.guest_upload_image_path,
     qr.table_number,
     qr.table_label,
     qr.guest_group_name
@@ -577,6 +636,15 @@ alter table public.qr_codes enable row level security;
 alter table public.upload_batches enable row level security;
 alter table public.photos enable row level security;
 
+insert into storage.buckets (id, name, public)
+values
+  ('event-assets-private', 'event-assets-private', false),
+  ('event-assets-public', 'event-assets-public', true)
+on conflict (id) do update
+set
+  name = excluded.name,
+  public = excluded.public;
+
 drop policy if exists admin_profiles_select_self_or_admin on public.admin_profiles;
 create policy admin_profiles_select_self_or_admin
   on public.admin_profiles
@@ -677,4 +745,54 @@ create policy storage_owner_delete_fotos_boda
   using (
     bucket_id = 'fotos-boda'
     and public.can_manage_storage_object(name, auth.uid())
+  );
+
+drop policy if exists storage_owner_insert_event_assets_private on storage.objects;
+create policy storage_owner_insert_event_assets_private
+  on storage.objects
+  for insert
+  to authenticated
+  with check (
+    bucket_id = 'event-assets-private'
+    and public.can_manage_event_asset_object(name, auth.uid())
+  );
+
+drop policy if exists storage_owner_read_event_assets_private on storage.objects;
+create policy storage_owner_read_event_assets_private
+  on storage.objects
+  for select
+  to authenticated
+  using (
+    bucket_id = 'event-assets-private'
+    and public.can_manage_event_asset_object(name, auth.uid())
+  );
+
+drop policy if exists storage_owner_delete_event_assets_private on storage.objects;
+create policy storage_owner_delete_event_assets_private
+  on storage.objects
+  for delete
+  to authenticated
+  using (
+    bucket_id = 'event-assets-private'
+    and public.can_manage_event_asset_object(name, auth.uid())
+  );
+
+drop policy if exists storage_owner_insert_event_assets_public on storage.objects;
+create policy storage_owner_insert_event_assets_public
+  on storage.objects
+  for insert
+  to authenticated
+  with check (
+    bucket_id = 'event-assets-public'
+    and public.can_manage_event_asset_object(name, auth.uid())
+  );
+
+drop policy if exists storage_owner_delete_event_assets_public on storage.objects;
+create policy storage_owner_delete_event_assets_public
+  on storage.objects
+  for delete
+  to authenticated
+  using (
+    bucket_id = 'event-assets-public'
+    and public.can_manage_event_asset_object(name, auth.uid())
   );

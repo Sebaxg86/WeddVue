@@ -6,6 +6,7 @@ export const supabase = hasSupabaseConfig
   ? createClient(clientEnv.supabaseUrl, clientEnv.supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
+        detectSessionInUrl: true,
         persistSession: true,
       },
     })

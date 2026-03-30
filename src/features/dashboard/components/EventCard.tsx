@@ -21,10 +21,19 @@ function formatEventDate(eventDate: string | null) {
 }
 
 export function EventCard({ event, imageAlt, imageUrl }: EventCardProps) {
+  const resolvedImageUrl = event.cover_image_url || imageUrl
+  const resolvedImageAlt = event.cover_image_url
+    ? `Portada del evento ${event.title}`
+    : imageAlt
+
   return (
     <Link className="dashboard-studio__event-card" to={`/dashboard/events/${event.id}`}>
       <div className="dashboard-studio__event-media">
-        <img alt={imageAlt} className="dashboard-studio__event-image" src={imageUrl} />
+        <img
+          alt={resolvedImageAlt}
+          className="dashboard-studio__event-image"
+          src={resolvedImageUrl}
+        />
         <div className="dashboard-studio__event-tint" aria-hidden="true" />
       </div>
 

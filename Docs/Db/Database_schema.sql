@@ -17,6 +17,8 @@ CREATE TABLE public.events (
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
   owner_user_id uuid NOT NULL,
+  cover_image_path text,
+  guest_upload_image_path text,
   CONSTRAINT events_pkey PRIMARY KEY (id),
   CONSTRAINT events_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES auth.users(id)
 );

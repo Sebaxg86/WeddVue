@@ -37,8 +37,12 @@ Use this document to answer the practical question:
 ### Event workspace and QR setup
 
 - Change the event workspace page at `/dashboard/events/:eventId`: [EventWorkspacePage.tsx](../src/features/events/pages/EventWorkspacePage.tsx)
-- Change the event summary card and table-count generation flow: [EventSetupPanel.tsx](../src/features/events/components/EventSetupPanel.tsx)
+- Change the table-count generation flow and workspace tabs: [EventWorkspacePage.tsx](../src/features/events/pages/EventWorkspacePage.tsx)
 - Change each table card, QR actions, or mobile QR controls: [TableQrCard.tsx](../src/features/events/components/TableQrCard.tsx)
+- Change the private gallery cards: [EventPhotoCard.tsx](../src/features/events/components/EventPhotoCard.tsx)
+- Change the gallery lightbox: [EventGalleryLightbox.tsx](../src/features/events/components/EventGalleryLightbox.tsx)
+- Change event cover/guest image pickers: [EventImageField.tsx](../src/features/events/components/EventImageField.tsx)
+- Change event image storage and signed URLs: [eventAssetStorage.ts](../src/features/events/lib/eventAssetStorage.ts)
 - Change event-side types: [eventTypes.ts](../src/features/events/lib/eventTypes.ts)
 - Change how frontend QR tokens are generated before saving: [generateQrToken.ts](../src/features/events/lib/generateQrToken.ts)
 
@@ -68,6 +72,9 @@ Use this document to answer the practical question:
 ### Global look and feel
 
 - Change colors, spacing, typography, layout primitives, buttons, cards, or responsive behavior: [globals.css](../src/styles/globals.css)
+- Change the shared editorial footer: [EditorialFooter.tsx](../src/shared/components/EditorialFooter.tsx)
+- Change the private dashboard/event layout frame: [PrivateEditorialLayout.tsx](../src/shared/layouts/PrivateEditorialLayout.tsx)
+- Change the home carousel behavior: [HomeHeroCarousel.tsx](../src/features/home/components/HomeHeroCarousel.tsx)
 - Change document-level metadata like title or description: [index.html](../index.html)
 - Change the favicon: [favicon.svg](../public/favicon.svg)
 
